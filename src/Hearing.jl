@@ -72,4 +72,9 @@ function NLogarithm(x, slope, asym, cf)
           x, slope, asym, cf)
 end
 
+function sim_an(ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp, ffGn)
+    ccall((:Synapse, libihc), Cdouble, (Ptr{Cdouble}, Cdouble, Cdouble, Cint, Cint, Cdouble, Cdouble, Cdouble, Cdouble, Ptr{Cdouble}, Ptr{nothing}),
+          ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp, ffGn)
+end
+
 end # module
