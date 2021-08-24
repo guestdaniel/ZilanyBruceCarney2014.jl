@@ -5,9 +5,17 @@
   nerve model available at
   https://www.urmc.rochester.edu/labs/carney/publications-code/auditory-models.aspx.
 
-  No changes are made to the essential logic of the code. The only changes made are
-  to strip out any mex-specific code to make it a standard C function that can be
-  accessed via Julia. Some minor formatting cleanup was also performed.
+  Some formatting changes were made to the code to improve readability. This was
+  exclusively performed in the functions that have direct Julia bindings (IHCAN,
+  Synapse, and SingleAN). The Julia test suite available in Hearing.jl can
+  verify that these formatting changes did not affect any of the code.
+
+  The only changes to the logic of the code were to handle function pointers
+  from Julia as arguments where necessary and to strip out any code specific
+  to mex/MATLAB. Again, the test suite available in Hearing.jl can verify that
+  these changes did not alter the essential functionality of the code.
+
+  - Daniel R. Guest, 2021
 
   Original text
   =============
@@ -47,16 +55,13 @@
    %%% © M. S. Arefeen Zilany (msazilany@gmail.com), Ian C. Bruce
   (ibruce@ieee.org), Rasha A. Ibrahim, Paul C. Nelson, and Laurel H. Carney -
   November 2013 %%%
-
 */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>      /* Added for MS Visual C++ compatability, by Ian Bruce, 1999 */
+#include <math.h>
 #include <time.h>
-/* #include <iostream.h>  This file may be needed for some C compilers - Not
- * needed for lcc */
 
 #include "complex.hpp"
 
@@ -78,8 +83,8 @@ void IHCAN(double *px, double cf, int nrep, double tdres, int totalstim,
 {
     /*variables for middle-ear model */
 	double megainmax;
-    double *mey1, *mey2, *mey3, meout,c1filterouttmp,c2filterouttmp,c1vihctmp,c2vihctmp;
-    double fp,C,m11,m12,m13,m14,m15,m16,m21,m22,m23,m24,m25,m26,m31,m32,m33,m34,m35,m36;
+  double *mey1, *mey2, *mey3, meout,c1filterouttmp,c2filterouttmp,c1vihctmp,c2vihctmp;
+  double fp,C,m11,m12,m13,m14,m15,m16,m21,m22,m23,m24,m25,m26,m31,m32,m33,m34,m35,m36;
 
 	/*variables for the signal-path, control-path and onward */
 	double *ihcouttmp,*tmpgain;
@@ -115,108 +120,108 @@ void IHCAN(double *px, double cf, int nrep, double tdres, int totalstim,
 	/** Calculate the center frequency for the control-path wideband filter
 	    from the location on basilar membrane, based on Greenwood (JASA 1990) */
 	if (species==1) /* for cat */
-    {
-        /* Cat frequency shift corresponding to 1.2 mm */
-        bmplace = 11.9 * log10(0.80 + cf / 456.0); /* Calculate the location on basilar membrane from CF */
-        centerfreq = 456.0*(pow(10,(bmplace+1.2)/11.9)-0.80); /* shift the center freq */
-    }
+  {
+    /* Cat frequency shift corresponding to 1.2 mm */
+    bmplace = 11.9 * log10(0.80 + cf / 456.0); /* Calculate the location on basilar membrane from CF */
+    centerfreq = 456.0*(pow(10,(bmplace+1.2)/11.9)-0.80); /* shift the center freq */
+  }
 
 	if (species>1) /* for human */
-    {
-        /* Human frequency shift corresponding to 1.2 mm */
-        bmplace = (35/2.1) * log10(1.0 + cf / 165.4); /* Calculate the location on basilar membrane from CF */
-        centerfreq = 165.4*(pow(10,(bmplace+1.2)/(35/2.1))-1.0); /* shift the center freq */
-    }
+  {
+    /* Human frequency shift corresponding to 1.2 mm */
+    bmplace = (35/2.1) * log10(1.0 + cf / 165.4); /* Calculate the location on basilar membrane from CF */
+    centerfreq = 165.4*(pow(10,(bmplace+1.2)/(35/2.1))-1.0); /* shift the center freq */
+  }
+
 	/*==================================================================*/
 	/*====== Parameters for the gain ===========*/
 	if(species==1) gain = 52.0/2.0*(tanh(2.2*log10(cf/0.6e3)+0.15)+1.0); /* for cat */
-    if(species>1) gain = 52.0/2.0*(tanh(2.2*log10(cf/0.6e3)+0.15)+1.0); /* for human */
-    /*gain = 52/2*(tanh(2.2*log10(cf/1e3)+0.15)+1);*/
-    if(gain>60.0) gain = 60.0;  
-    if(gain<15.0) gain = 15.0;
-    
+  if(species>1) gain = 52.0/2.0*(tanh(2.2*log10(cf/0.6e3)+0.15)+1.0); /* for human */
+  if(gain>60.0) gain = 60.0;
+  if(gain<15.0) gain = 15.0;
+
 	/*====== Parameters for the control-path wideband filter =======*/
 	bmorder = 3;
 	Get_tauwb(cf,species,bmorder,Taumax,Taumin);
 	taubm   = cohc*(Taumax[0]-Taumin[0])+Taumin[0];
 	ratiowb = Taumin[0]/Taumax[0];
+
 	/*====== Parameters for the signal-path C1 filter ======*/
 	Get_taubm(cf,species,Taumax[0],bmTaumax,bmTaumin,ratiobm);
 	bmTaubm  = cohc*(bmTaumax[0]-bmTaumin[0])+bmTaumin[0];
 	fcohc    = bmTaumax[0]/bmTaubm;
-    /*====== Parameters for the control-path wideband filter =======*/
+
+  /*====== Parameters for the control-path wideband filter =======*/
 	wborder  = 3;
-    TauWBMax = Taumin[0]+0.2*(Taumax[0]-Taumin[0]);
+  TauWBMax = Taumin[0]+0.2*(Taumax[0]-Taumin[0]);
 	TauWBMin = TauWBMax/Taumax[0]*Taumin[0];
-    tauwb    = TauWBMax+(bmTaubm-bmTaumax[0])*(TauWBMax-TauWBMin)/(bmTaumax[0]-bmTaumin[0]);
-	
+  tauwb    = TauWBMax+(bmTaubm-bmTaumax[0])*(TauWBMax-TauWBMin)/(bmTaumax[0]-bmTaumin[0]);
 	wbgain = gain_groupdelay(tdres,centerfreq,cf,tauwb,grdelay);
-	tmpgain[0]   = wbgain; 
+	tmpgain[0]   = wbgain;
 	lasttmpgain  = wbgain;
-  	/*===============================================================*/
-    /* Nonlinear asymmetry of OHC function and IHC C1 transduction function*/
+
+	/*===============================================================*/
+  /* Nonlinear asymmetry of OHC function and IHC C1 transduction function*/
 	ohcasym  = 7.0;    
 	ihcasym  = 3.0;
-  	/*===============================================================*/
-    /*===============================================================*/
-    /* Prewarping and related constants for the middle ear */
-     fp = 1e3;  /* prewarping frequency 1 kHz */
-     C  = TWOPI*fp/tan(TWOPI/2*fp*tdres);
-     if (species==1) /* for cat */
-     {
-         /* Cat middle-ear filter - simplified version from Bruce et al. (JASA 2003) */
-         m11 = C/(C + 693.48);                    m12 = (693.48 - C)/C;            m13 = 0.0;
-         m14 = 1.0;                               m15 = -1.0;                      m16 = 0.0;
-         m21 = 1/(pow(C,2) + 11053*C + 1.163e8);  m22 = -2*pow(C,2) + 2.326e8;     m23 = pow(C,2) - 11053*C + 1.163e8; 
-         m24 = pow(C,2) + 1356.3*C + 7.4417e8;    m25 = -2*pow(C,2) + 14.8834e8;   m26 = pow(C,2) - 1356.3*C + 7.4417e8;
-         m31 = 1/(pow(C,2) + 4620*C + 909059944); m32 = -2*pow(C,2) + 2*909059944; m33 = pow(C,2) - 4620*C + 909059944;
-         m34 = 5.7585e5*C + 7.1665e7;             m35 = 14.333e7;                  m36 = 7.1665e7 - 5.7585e5*C;
-         megainmax=41.1405;
-     };
-     if (species>1) /* for human */
-     {
-         /* Human middle-ear filter - based on Pascal et al. (JASA 1998)  */
-         m11=1/(pow(C,2)+5.9761e+003*C+2.5255e+007);m12=(-2*pow(C,2)+2*2.5255e+007);m13=(pow(C,2)-5.9761e+003*C+2.5255e+007);m14=(pow(C,2)+5.6665e+003*C);             m15=-2*pow(C,2);					m16=(pow(C,2)-5.6665e+003*C);
-         m21=1/(pow(C,2)+6.4255e+003*C+1.3975e+008);m22=(-2*pow(C,2)+2*1.3975e+008);m23=(pow(C,2)-6.4255e+003*C+1.3975e+008);m24=(pow(C,2)+5.8934e+003*C+1.7926e+008); m25=(-2*pow(C,2)+2*1.7926e+008);	m26=(pow(C,2)-5.8934e+003*C+1.7926e+008);
-         m31=1/(pow(C,2)+2.4891e+004*C+1.2700e+009);m32=(-2*pow(C,2)+2*1.2700e+009);m33=(pow(C,2)-2.4891e+004*C+1.2700e+009);m34=(3.1137e+003*C+6.9768e+008);     m35=2*6.9768e+008;				m36=(-3.1137e+003*C+6.9768e+008);
-         megainmax=2;
-     };
-  	for (n=0;n<totalstim;n++) /* Start of the loop */
-    {    
-        if (n==0)  /* Start of the middle-ear filtering section  */
+	/*===============================================================*/
+  /*===============================================================*/
+  /* Prewarping and related constants for the middle ear */
+  fp = 1e3;  /* prewarping frequency 1 kHz */
+  C  = TWOPI*fp/tan(TWOPI/2*fp*tdres);
+  if (species==1) /* for cat */
+  {
+    /* Cat middle-ear filter - simplified version from Bruce et al. (JASA 2003) */
+    m11 = C/(C + 693.48);                    m12 = (693.48 - C)/C;            m13 = 0.0;
+    m14 = 1.0;                               m15 = -1.0;                      m16 = 0.0;
+    m21 = 1/(pow(C,2) + 11053*C + 1.163e8);  m22 = -2*pow(C,2) + 2.326e8;     m23 = pow(C,2) - 11053*C + 1.163e8; 
+    m24 = pow(C,2) + 1356.3*C + 7.4417e8;    m25 = -2*pow(C,2) + 14.8834e8;   m26 = pow(C,2) - 1356.3*C + 7.4417e8;
+    m31 = 1/(pow(C,2) + 4620*C + 909059944); m32 = -2*pow(C,2) + 2*909059944; m33 = pow(C,2) - 4620*C + 909059944;
+    m34 = 5.7585e5*C + 7.1665e7;             m35 = 14.333e7;                  m36 = 7.1665e7 - 5.7585e5*C;
+    megainmax=41.1405;
+  };
+  if (species>1) /* for human */
+  {
+    /* Human middle-ear filter - based on Pascal et al. (JASA 1998)  */
+    m11=1/(pow(C,2)+5.9761e+003*C+2.5255e+007);m12=(-2*pow(C,2)+2*2.5255e+007);m13=(pow(C,2)-5.9761e+003*C+2.5255e+007);m14=(pow(C,2)+5.6665e+003*C);             m15=-2*pow(C,2);					m16=(pow(C,2)-5.6665e+003*C);
+    m21=1/(pow(C,2)+6.4255e+003*C+1.3975e+008);m22=(-2*pow(C,2)+2*1.3975e+008);m23=(pow(C,2)-6.4255e+003*C+1.3975e+008);m24=(pow(C,2)+5.8934e+003*C+1.7926e+008); m25=(-2*pow(C,2)+2*1.7926e+008);	m26=(pow(C,2)-5.8934e+003*C+1.7926e+008);
+    m31=1/(pow(C,2)+2.4891e+004*C+1.2700e+009);m32=(-2*pow(C,2)+2*1.2700e+009);m33=(pow(C,2)-2.4891e+004*C+1.2700e+009);m34=(3.1137e+003*C+6.9768e+008);     m35=2*6.9768e+008;				m36=(-3.1137e+003*C+6.9768e+008);
+    megainmax=2;
+  };
+ 	for (n=0;n<totalstim;n++) /* Start of the loop */
+  {
+    if (n==0)  /* Start of the middle-ear filtering section  */
 		{
-	    	mey1[0]  = m11*px[0];
-            if (species>1) mey1[0] = m11*m14*px[0];
-            mey2[0]  = mey1[0]*m24*m21;
-            mey3[0]  = mey2[0]*m34*m31;
-            meout = mey3[0]/megainmax ;
-        }
-            
-        else if (n==1)
+	  	mey1[0]  = m11*px[0];
+      if (species>1) mey1[0] = m11*m14*px[0];
+      mey2[0]  = mey1[0]*m24*m21;
+      mey3[0]  = mey2[0]*m34*m31;
+      meout = mey3[0]/megainmax ;
+    }
+    else if (n==1)
 		{
-            mey1[1]  = m11*(-m12*mey1[0] + px[1]       - px[0]);
-            if (species>1) mey1[1] = m11*(-m12*mey1[0]+m14*px[1]+m15*px[0]);
+      mey1[1]  = m11*(-m12*mey1[0] + px[1]       - px[0]);
+      if (species>1) mey1[1] = m11*(-m12*mey1[0]+m14*px[1]+m15*px[0]);
 			mey2[1]  = m21*(-m22*mey2[0] + m24*mey1[1] + m25*mey1[0]);
-            mey3[1]  = m31*(-m32*mey3[0] + m34*mey2[1] + m35*mey2[0]);
-            meout = mey3[1]/megainmax;
+      mey3[1]  = m31*(-m32*mey3[0] + m34*mey2[1] + m35*mey2[0]);
+      meout = mey3[1]/megainmax;
 		}
-	    else 
+    else
 		{
-            mey1[n]  = m11*(-m12*mey1[n-1]  + px[n]         - px[n-1]);
-            if (species>1) mey1[n]= m11*(-m12*mey1[n-1]-m13*mey1[n-2]+m14*px[n]+m15*px[n-1]+m16*px[n-2]);
-            mey2[n]  = m21*(-m22*mey2[n-1] - m23*mey2[n-2] + m24*mey1[n] + m25*mey1[n-1] + m26*mey1[n-2]);
-            mey3[n]  = m31*(-m32*mey3[n-1] - m33*mey3[n-2] + m34*mey2[n] + m35*mey2[n-1] + m36*mey2[n-2]);
-            meout = mey3[n]/megainmax;
-		}; 	/* End of the middle-ear filtering section */   
-     
-		/* Control-path filter */
+      mey1[n]  = m11*(-m12*mey1[n-1]  + px[n]         - px[n-1]);
+      if (species>1) mey1[n]= m11*(-m12*mey1[n-1]-m13*mey1[n-2]+m14*px[n]+m15*px[n-1]+m16*px[n-2]);
+      mey2[n]  = m21*(-m22*mey2[n-1] - m23*mey2[n-2] + m24*mey1[n] + m25*mey1[n-1] + m26*mey1[n-2]);
+      mey3[n]  = m31*(-m32*mey3[n-1] - m33*mey3[n-2] + m34*mey2[n] + m35*mey2[n-1] + m36*mey2[n-2]);
+      meout = mey3[n]/megainmax;
+		}; 	/* End of the middle-ear filtering section */
 
-        wbout1 = WbGammaTone(meout,tdres,centerfreq,n,tauwb,wbgain,wborder);
-        wbout  = pow((tauwb/TauWBMax),wborder)*wbout1*10e3*__max(1,cf/5e3);
-  
-        ohcnonlinout = Boltzman(wbout,ohcasym,12.0,5.0,5.0); /* pass the control signal through OHC Nonlinear Function */
+    /* Control-path filter */
+    wbout1 = WbGammaTone(meout,tdres,centerfreq,n,tauwb,wbgain,wborder);
+    wbout  = pow((tauwb/TauWBMax),wborder)*wbout1*10e3*__max(1,cf/5e3);
+
+    ohcnonlinout = Boltzman(wbout,ohcasym,12.0,5.0,5.0); /* pass the control signal through OHC Nonlinear Function */
 		ohcout = OhcLowPass(ohcnonlinout,tdres,600,n,1.0,2);/* lowpass filtering after the OHC nonlinearity */
-        
+
 		tmptauc1 = NLafterohc(ohcout,bmTaumin[0],bmTaumax[0],ohcasym); /* nonlinear function after OHC low-pass filter */
 		tauc1    = cohc*(tmptauc1-bmTaumin[0])+bmTaumin[0];  /* time -constant for the signal-path C1 filter */
 		rsigma   = 1/tauc1-1/bmTaumax[0]; /* shift of the location of poles of the C1 filter from the initial positions */
@@ -225,63 +230,56 @@ void IHCAN(double *px, double cf, int nrep, double tdres, int totalstim,
 
 		tauwb = TauWBMax+(tauc1-bmTaumax[0])*(TauWBMax-TauWBMin)/(bmTaumax[0]-bmTaumin[0]);
 
-	    wb_gain = gain_groupdelay(tdres,centerfreq,cf,tauwb,grdelay);
-		
-		grd = grdelay[0]; 
+    wb_gain = gain_groupdelay(tdres,centerfreq,cf,tauwb,grdelay);
 
-        if ((grd+n)<totalstim)
-	         tmpgain[grd+n] = wb_gain;
+		grd = grdelay[0];
 
-        if (tmpgain[n] == 0)
-			tmpgain[n] = lasttmpgain;	
-		
+    if ((grd+n)<totalstim)
+      tmpgain[grd+n] = wb_gain;
+
+    if (tmpgain[n] == 0)
+			tmpgain[n] = lasttmpgain;
+
 		wbgain      = tmpgain[n];
 		lasttmpgain = wbgain;
-	 		        
-        /*====== Signal-path C1 filter ======*/
-         
-		 c1filterouttmp = C1ChirpFilt(meout, tdres, cf, n, bmTaumax[0], rsigma); /* C1 filter output */
 
-	 
-        /*====== Parallel-path C2 filter ======*/
+    /*====== Signal-path C1 filter ======*/
+		c1filterouttmp = C1ChirpFilt(meout, tdres, cf, n, bmTaumax[0], rsigma); /* C1 filter output */
 
-		 c2filterouttmp  = C2ChirpFilt(meout, tdres, cf, n, bmTaumax[0], 1/ratiobm[0]); /* parallel-filter output*/
+    /*====== Parallel-path C2 filter ======*/
+		c2filterouttmp  = C2ChirpFilt(meout, tdres, cf, n, bmTaumax[0], 1/ratiobm[0]); /* parallel-filter output*/
 
-	    /*=== Run the inner hair cell (IHC) section: NL function and then lowpass filtering ===*/
-
-        c1vihctmp  = NLogarithm(cihc*c1filterouttmp,0.1,ihcasym,cf);
-	     
+	  /*=== Run the inner hair cell (IHC) section: NL function and then lowpass filtering ===*/
+    c1vihctmp  = NLogarithm(cihc*c1filterouttmp,0.1,ihcasym,cf);
 		c2vihctmp = -NLogarithm(c2filterouttmp*fabs(c2filterouttmp)*cf/10*cf/2e3,0.2,1.0,cf); /* C2 transduction output */
-            
-        ihcouttmp[n] = IhcLowPass(c1vihctmp+c2vihctmp,tdres,3000,n,1.0,7);
-   };  /* End of the loop */
-   
-    /* Stretched out the IHC output according to nrep (number of repetitions) */
-   
-    for(i=0;i<totalstim*nrep;i++)
+    ihcouttmp[n] = IhcLowPass(c1vihctmp+c2vihctmp,tdres,3000,n,1.0,7);
+  };  /* End of the loop */
+
+  /* Stretched out the IHC output according to nrep (number of repetitions) */
+  for(i=0;i<totalstim*nrep;i++)
 	{
 		ihcouttmp[i] = ihcouttmp[(int) (fmod(i,totalstim))];
-  	};   
-   	/* Adjust total path delay to IHC output signal */
-    if (species==1)
-        delay      = delay_cat(cf);
-    if (species>1)
-    {/*    delay      = delay_human(cf); */
-        delay      = delay_cat(cf); /* signal delay changed back to cat function for version 5.2 */
-    };
-    delaypoint =__max(0,(int) ceil(delay/tdres));
+  };
+ 	/* Adjust total path delay to IHC output signal */
+  if (species==1)
+  {
+    delay      = delay_cat(cf);
+  }
+  if (species>1)
+  {
+    delay      = delay_cat(cf); /* signal delay changed back to cat function for version 5.2 */
+  };
+  delaypoint =__max(0,(int) ceil(delay/tdres));
 
-    for(i=delaypoint;i<totalstim*nrep;i++)
-    	{
-    		ihcout[i] = ihcouttmp[i - delaypoint];
-    	};
+  for(i=delaypoint;i<totalstim*nrep;i++)
+  {
+    ihcout[i] = ihcouttmp[i - delaypoint];
+  };
 
-
-    /* Freeing dynamic memory allocated earlier */
-    free(ihcouttmp);
-    free(mey1); free(mey2); free(mey3);
-    free(tmpgain);
-
+  /* Freeing dynamic memory allocated earlier */
+  free(ihcouttmp);
+  free(mey1); free(mey2); free(mey3);
+  free(tmpgain);
 } /* End of the SingleAN function */
 /* -------------------------------------------------------------------------------------------- */
 /* -------------------------------------------------------------------------------------------- */
