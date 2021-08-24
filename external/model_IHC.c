@@ -74,7 +74,7 @@
 #endif
 
 void IHCAN(double *px, double cf, int nrep, double tdres, int totalstim,
-                double cohc, double cihc, int species, double *ihcout)
+           double cohc, double cihc, int species, double *ihcout)
 {
     /*variables for middle-ear model */
 	double megainmax;
@@ -275,6 +275,7 @@ void IHCAN(double *px, double cf, int nrep, double tdres, int totalstim,
     	{
     		ihcout[i] = ihcouttmp[i - delaypoint];
     	};
+
 
     /* Freeing dynamic memory allocated earlier */
     free(ihcouttmp);
