@@ -1,4 +1,4 @@
-module ZBC2014
+module ANF
 include("../external/util.jl")
 
 # Declare the location of the shared C library 
@@ -8,18 +8,23 @@ const libihc = "/home/daniel/ANF.jl/external/libihc.so"
 c_ffGn = @cfunction(ffGn, Vector{Cdouble}, (Cint, ))
 c_decimate = @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint))
 
-function translate_species_label(species::String)::Int32
-    return Dict([("cat", 1), ("human", 2), ("human_glasberg", 3)])[species]
-end
-
-
 """
-    sim_ihc_zbc2014(input, cf::Float64; fs=10e4, cohc=1.0, cihc=1.0, species="cat")
+    sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="cat")
+
+Simulates inner hair cell potential for given acoustic input.
+
+# Arguments
+- `input::Array{Float64, 1}`: sound pressure waveform in pascals
+- `cf::Float64`: characteristic frequency of the IHC in Hz
+- `fs::Float64`: sampling rate in Hz
+- `cohc::Float64`: outer hair cell survival (from 0 to 1)
+- `cihc::Float64`: inner hair cell survival (from 0 to 1)
+- `species::Int32`: species, either (1 = cat, 2 = humans with Shera tuning, 3 = humans with Glasberg tuning)
 """
 function sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
                          cohc::Float64=1.0, cihc::Float64=1.0, species::String="cat")
     # Map species string to species integer expected by IHCAN!
-    species_flag = translate_species_label(species)
+    species_flag = Dict([("cat", 1), ("human", 2), ("human_glasberg", 3)])[species]
     # Create empty array for output
     output = zeros((length(input), ))
     # Make call
@@ -29,25 +34,26 @@ function sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4
 end
 
 """
-    sim_ihc_zbc2014(input, cf::Array{Float64, 1}; fs=10e4, cohc=1.0, cihc=1.0, species="cat")
+    sim_an_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species)
+# Arguments
+- `input::Array{Float64, 1}`: input hair cell potential (from sim_ihc_zbc2014)
+- `cf::Float64`: characteristic frequency of the fiber in Hz
+- `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
+- `frac_noise::String`: controls whether we use true or approximate fractional Gaussian noise implementation, one of ("actual", "approximate")
 """
-function sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Array{Float64, 1}; fs::Float64=10e4,
-                         cohc::Float64=1.0, cihc::Float64=1.0, species::String="cat")::Array{Float64, 2}
-    # Map species string to species integer expected by IHCAN!
-    species_flag = translate_species_label(species)
+function sim_an_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
+                        fiber_type::String="high", frac_noise::String="approximate")
+    # Map fiber type string to float code expected by Synapse!
+    spont = Dict([("low", 0.1), ("medium", 4.0), ("high", 100.0)])[fiber_type]
+    # Map fractional noise implementation type to float code expected by Syanpse!
+    implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[frac_noise]
     # Create empty array for output
-    _temp_output = zeros((length(input), ))  # pointer to send to C
-    output = zeros((length(input), length(cf)))  # actual output
+    output = zeros((length(input), ))
     # Make call
-    for ii in 1:length(cf)
-        IHCAN!(input, cf[ii], Int32(1), 1/fs, Int32(length(input)), cohc, cihc, Int32(species_flag),
-               _temp_output);
-        output[:, ii] = _temp_output
-    end
+    Synapse!(input, 1.0/fs, cf, Int32(length(input)), Int32(1), spont, 1.0, implnt, fs, output)
     # Return
     return output
 end
-
 
 """
     IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout)
@@ -112,7 +118,7 @@ function Synapse!(ihcout::Array{Float64, 1}, tdres::Float64, cf::Float64,
 end
 
 """
-    SingleAN!(ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt, meanrate, varrate, psth) 
+    SingleAN!(ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt, meanrate, varrate, psth)
 
 Direct binding to Synapse C function in model_Synapse.c
 
