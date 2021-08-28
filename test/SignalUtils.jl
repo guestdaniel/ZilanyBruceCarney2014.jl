@@ -1,8 +1,9 @@
 using Test
-include("../src/Hearing.jl")
+include("../src/SignalUtils.jl")
+
 
 # Declare various constants that hold across all tests
-fs = 5000
+fs = 5000.0
 dur = 1.0
 precision = -3
 
@@ -22,33 +23,33 @@ end
 
 # Test that pure_tone() properly synthesizes tones with phase shifts in radians (0, pi/2, pi, 3pi/2) work correctly
 @testset "pure tones" begin
-    @test ae(Hearing.pure_tone(5.0, 0.0, dur, fs)[1], 0)
-    @test ae(Hearing.pure_tone(5.0, pi/2, dur, fs)[1], 1)
-    @test ae(Hearing.pure_tone(5.0, pi, dur, fs)[1], 0)
-    @test ae(Hearing.pure_tone(5.0, 3*pi/2, dur, fs)[1], -1)
+    @test ae(SignalUtils.pure_tone(5.0, 0.0, dur, fs)[1], 0)
+    @test ae(SignalUtils.pure_tone(5.0, pi/2, dur, fs)[1], 1)
+    @test ae(SignalUtils.pure_tone(5.0, pi, dur, fs)[1], 0)
+    @test ae(SignalUtils.pure_tone(5.0, 3*pi/2, dur, fs)[1], -1)
 end
 
 # Test that rms() correctly returns the rms values of an unscaled sinusoid
-@test ae(Hearing.rms(Hearing.pure_tone(5.0, 0.0, dur, fs)), 0.707)
+@test ae(SignalUtils.rms(SignalUtils.pure_tone(5.0, 0.0, dur, fs)), 0.707)
 
 # Test that dbspl() correctly correctly calculates levels of reference stimuli
-@test ae(Hearing.dbspl(Hearing.pure_tone(5.0, 0.0, dur, fs)), 90.968)
+@test ae(SignalUtils.dbspl(SignalUtils.pure_tone(5.0, 0.0, dur, fs)), 90.968)
 
 # Test that amplify() produces correct changes in power and amplitude of sinusoid
 @testset "amplification" begin
     # Test amplification
     @test begin
         # Synthesize pure tone and then increment it by 10 dB
-	      baseline_signal = Hearing.pure_tone(5.0, 0.0, dur, fs)
-        amplified_signal = Hearing.amplify(baseline_signal, 6.0)
+	      baseline_signal = SignalUtils.pure_tone(5.0, 0.0, dur, fs)
+        amplified_signal = SignalUtils.amplify(baseline_signal, 6.0)
         # Check that amplitude and power ratios are correct
         ae(maximum(amplified_signal)/maximum(baseline_signal), 1.995) && ae(maximum(amplified_signal)^2/maximum(baseline_signal)^2, 3.981)
     end
     # Test attenuation
     @test begin
         # Synthesize pure tone and then increment it by 10 dB
-	      baseline_signal = Hearing.pure_tone(5.0, 0.0, dur, fs)
-        amplified_signal = Hearing.amplify(baseline_signal, -6.0)
+	      baseline_signal = SignalUtils.pure_tone(5.0, 0.0, dur, fs)
+        amplified_signal = SignalUtils.amplify(baseline_signal, -6.0)
         # Check that amplitude and power ratios are correct
         ae(maximum(amplified_signal)/maximum(baseline_signal), 0.501) && ae(maximum(amplified_signal)^2/maximum(baseline_signal)^2, 0.251)
     end

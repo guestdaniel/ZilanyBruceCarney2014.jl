@@ -1,4 +1,4 @@
-module Hearing
+module SignalUtils
 using Statistics
 
 """
