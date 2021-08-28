@@ -2,7 +2,7 @@ module ZBC2014
 include("../external/util.jl")
 
 # Declare the location of the shared C library 
-const libihc = "/home/daniel/Hearing/external/libihc.so"
+const libihc = "/home/daniel/ANF.jl/external/libihc.so"
 
 # Declare some C functions
 c_ffGn = @cfunction(ffGn, Vector{Cdouble}, (Cint, ))
