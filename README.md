@@ -10,6 +10,7 @@ This package was written in Julia to supplement the existing packages and take a
 - Interoperability between Julia and C is excellent and significantly less complicated than interoperability between Python and C or MATLAB and C. This allows for a very "clean" bindings to be written for models natively written in C [[1]](#1) with very low overhead.
 - Julia can be exceptionally fast. While MATLAB and Python can achieve similar speeds on most problems, this may require the use of performance-oriented libraries like NumPy, Numba, or Cython (in the case of Python) that can only be applied to limited problem types or may require avoiding useful abstractions or convenience features (e.g., function calls in MATLAB). Such restrictions are absent or less onerous in Julia. 
 - Julia has excellent tools for documentation and reproducible computing. For example, this package's in-line documentation is automatically rendered from Markdown to HTML and is available at LINK, and this package's set of dependencies is precisely version controlled in `Project.toml`.
+- Julia has a rapidly developing ecosystem of state-of-the-art packages that could be easily integrated with this package. Examples relevant to those in the auditory modeling field including [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl), [DynamicalSystems.jl](https://github.com/JuliaDynamics/DynamicalSystems.jl), [Flux.jl](https://github.com/FluxML/Flux.jl), and [Turing.jl](https://github.com/TuringLang/Turing.jl). 
 
 ## Implemented models
 
