@@ -1,12 +1,18 @@
 module ANF
-include("../external/util.jl")
+using DSP
 
-# Declare the location of the shared C library 
+function ffGn(N::Int32)
+    return zeros((N, ))
+end
+
+function decimate(original_signal::Ptr{Cdouble}, k::Int32, resamp::Int32)
+    temp_orig = unsafe_wrap(Array, original_signal, k)
+    _resampled = resample(temp_orig, 1/resamp)
+    return pointer(_resampled)
+end
+
+# Declare the location of the shared C library
 const libihc = "/home/daniel/ANF.jl/external/libihc.so"
-
-# Declare some C functions
-c_ffGn = @cfunction(ffGn, Vector{Cdouble}, (Cint, ))
-c_decimate = @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint))
 
 """
     sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="cat")
@@ -33,6 +39,7 @@ function sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4
     return output
 end
 
+
 """
     sim_an_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species)
 # Arguments
@@ -54,6 +61,7 @@ function sim_an_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
     # Return
     return output
 end
+
 
 """
     IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout)
@@ -83,6 +91,7 @@ function IHCAN!(px::Array{Float64, 1}, cf::Float64, nrep::Int32, tdres::Float64,
                                     Cdouble, Cdouble, Cint, Ptr{Cdouble}),
           px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout)
 end
+
 
 """
     Synapse!(ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp)
@@ -114,8 +123,9 @@ function Synapse!(ihcout::Array{Float64, 1}, tdres::Float64, cf::Float64,
                                         Cint, Cdouble, Cdouble, Cdouble, Cdouble,
                                         Ptr{Cdouble}, Ptr{nothing}, Ptr{nothing}),
           ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq,
-          synouttmp, c_ffGn, c_decimate)
+          synouttmp, @cfunction(ffGn, Vector{Cdouble}, (Cint, )), @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)))
 end
+
 
 """
     SingleAN!(ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt, meanrate, varrate, psth)
@@ -150,7 +160,7 @@ function SingleAN(ihcout::Array{Float64, 1}, cf::Float64, nrep::Int32,
                                        Ptr{Cdouble}, Ptr{Cdouble},
                                        Ptr{Cdouble}, Ptr{nothing}, Ptr{nothing}),
           ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt,
-          meanrate, varrate, psth, c_ffGn, c_decimate)
+          meanrate, varrate, psth, @cfunction(ffGn, Vector{Cdouble}, (Cint, )), @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)))
 end
 
 end # module
