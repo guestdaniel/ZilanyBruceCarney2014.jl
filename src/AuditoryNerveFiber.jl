@@ -1,62 +1,16 @@
 module AuditoryNerveFiber
 using DSP
 using FFTW
+using AuditorySignalUtils
+const ASU = AuditorySignalUtils
 
 """
     ffGn(N, tdres, Hinput, noiseType, mu, sigma)
 
-Synthesizes a sample of fractional Gaussian noise of length N
+Synthesizes a sample of fractional Gaussian noise of length N. Presently it just returns zeros, but functionality will be added soon.
 """
-function ffGn(N::Int32, tdres::Float64, Hinput::Float64, noisetype::Float64, mu::Float64)
-    # First, handle noisetype
-    if noisetype == 0.0
-        return zeros((N, ))
-    else
-        # util.py: Downsampling no. of points to match with those of Scott Jackson (tau 1e-1)
-        resamp = Int(ceil(1e-1/tdres))
-        nop = N
-        N = Int(ceil(N/resamp) + 1)
-        if N < 10
-            N = 10
-        end
-        # util.py: Determine whether fGn or fBn should be produced
-        if Hinput < 1.0
-            H = Hinput
-            fBn = 0.0
-        else
-            H = Hinput - 1
-            fBn = 1
-        end
-        # util.py: Calculate the fGn
-        if H == 0.5
-            # util.py: If h=0.5, then fGn is equivalent to white Gaussian noise
-            y = randn(N)
-        else
-            Nfft = Int(2 ^ ceil(log2(2*(N-1))))
-            NfftHalf = Int(round(Nfft/2))
-            k = [0:(NfftHalf-1); (NfftHalf):-1:(0+1)]
-            Zmag = 0.5 * ( (k .+ 1).^(2 .* H) -2 .* k.^(2 .* H) + abs.(k .- 1).^(2 .* H) )
-            Zmag = real(fft(Zmag))
-            Zmag = sqrt.(Zmag)
-            Z = Zmag .* (randn(Nfft) .+ 1im .* randn(Nfft))
-            y = real(ifft(Z)) .* sqrt.(Nfft)
-            y = y[1:N]
-            if fBn == 1.0
-                y = cumsum(y)
-            end
-            # util.py: Resample to match AN model_IHC
-            y = resample(y, resamp*length(y)) 
-            if mu < 0.5
-                sigma = 3.0
-            elseif mu < 18.0
-                sigma = 30.0
-            else
-                sigma = 200.0
-            end
-            y = y.*sigma 
-            return y[1:nop]
-        end
-    end
+function ffGn(N::Int32)
+    return zeros((N, ))
 end
 
 """
@@ -71,7 +25,7 @@ function decimate(original_signal::Ptr{Cdouble}, k::Int32, resamp::Int32)
 end
 
 # Declare the location of the shared C library
-const libihc = "/home/daniel/ANF.jl/external/libihc.so"
+const libihc = "/home/daniel/AuditoryNerveFiber.jl/external/libihc.so"
 
 """
     sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="cat")
