@@ -1,10 +1,23 @@
-module ANF
+module AuditoryNerveFiber
 using DSP
+using FFTW
+using AuditorySignalUtils
+const ASU = AuditorySignalUtils
 
+"""
+    ffGn(N, tdres, Hinput, noiseType, mu, sigma)
+
+Synthesizes a sample of fractional Gaussian noise of length N. Presently it just returns zeros, but functionality will be added soon.
+"""
 function ffGn(N::Int32)
     return zeros((N, ))
 end
 
+"""
+    decimate(original_signal, k, resamp)
+
+Downsamples a 1D signal of length k by a factor of 1/resamp using DSP.resample
+"""
 function decimate(original_signal::Ptr{Cdouble}, k::Int32, resamp::Int32)
     temp_orig = unsafe_wrap(Array, original_signal, k)
     _resampled = resample(temp_orig, 1/resamp)
@@ -12,7 +25,7 @@ function decimate(original_signal::Ptr{Cdouble}, k::Int32, resamp::Int32)
 end
 
 # Declare the location of the shared C library
-const libihc = "/home/daniel/ANF.jl/external/libihc.so"
+const libihc = "/home/daniel/AuditoryNerveFiber.jl/external/libihc.so"
 
 """
     sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="cat")
