@@ -1,5 +1,6 @@
 using BenchmarkTools
-using ANF
+using AuditoryNerveFiber
+const ANF = AuditoryNeverFiber
 using AuditorySignalUtils
 const ASU = AuditorySignalUtils
 

@@ -16,6 +16,11 @@ dur = 0.1
 freq = 1000.0
 pt = ASU.scale_dbspl(ASU.pure_tone(freq, 0.0, dur, fs), 50.0)
 
+# Test ffGn
+@test begin
+    sample = ANF.ffGn(Int32(10000), 1/fs, 0.75, 1.0, 1.0)
+end
+
 # Start by testing the direct bindings and just make sure that they run!
 @testset "C bindings: check callable" begin
   # First, we try testing the direct C binding to the IHC code (IHCAN!)
