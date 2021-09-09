@@ -10,17 +10,29 @@ const ANF = AuditoryNerveFiber
 using AuditorySignalUtils
 const ASU = AuditorySignalUtils
 using Statistics
+using DSP
 
 # Declare various constants that hold across all tests in this file
 fs = 100000.0
 dur = 0.1
 freq = 1000.0
 pt = ASU.scale_dbspl(ASU.pure_tone(freq, 0.0, dur, fs), 50.0)
+tol = 1e-2
 
 # Test ffGn
 #@test begin
 #    sample = ANF.ffGn(Int32(10000), 1/fs, 0.75, 1.0, 1.0)
 #end
+
+# Test decimate function
+@testset "Decimate" begin
+    # First, we should test DSP.resample to make sure it does what we want
+    @test begin
+        # Decimate pure tone by factor of five
+        pt_resampled = resample(pt, 1/5)  
+        (length(pt_resampled) == 2000) && (maximum(pt_resampled[:] - pt[1:5:length(pt)]) < tol)
+    end
+end
 
 # Start by testing the direct bindings and just make sure that they run!
 @testset "C bindings: check callable" begin
@@ -129,5 +141,23 @@ end
         outputs = [ANF.sim_an_zbc2014(ihcout, freq)[1] for ihcout in ihcouts]
         means = map(Statistics.mean, outputs)
         means[5] > means[4] > means[3] > means[2] > means[1]
+    end
+    # Check that IHC shows reasonable frequency tuning
+    @test begin
+        cfs = ASU.LogRange(200.0, 5000.0, 40)
+        tuning_curve = map(cf -> mean(ANF.sim_ihc_zbc2014(pt, cf)), cfs)
+        abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
+    end
+    # Check that synapse shows reasonable frequency tuning
+    @test begin
+        cfs = ASU.LogRange(200.0, 5000.0, 40)
+        tuning_curve = map(cf -> mean(ANF.sim_synapse_zbc2014(pt, cf)), cfs)
+        abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
+    end
+    # Check that auditory nerve shows reasonable frequency tuning
+    @test begin
+        cfs = ASU.LogRange(200.0, 5000.0, 40)
+        tuning_curve = map(cf -> mean(ANF.sim_an_zbc2014(pt, cf)[1]), cfs)
+        abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
     end
 end
