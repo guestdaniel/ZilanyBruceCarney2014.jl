@@ -20,7 +20,8 @@ Downsamples a 1D signal of length k by a factor of 1/resamp using DSP.resample
 """
 function decimate(original_signal::Ptr{Cdouble}, k::Int32, resamp::Int32)
     temp_orig = unsafe_wrap(Array, original_signal, k)
-    _resampled = resample(temp_orig, 1/resamp)
+    _resampled = temp_orig[1:resamp:k]
+    #_resampled = resample(temp_orig, 1/resamp)
     return pointer(_resampled)
 end
 
@@ -57,13 +58,15 @@ end
 
 
 """
-    sim_synapse_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0)
+    sim_synapse_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, cohc=1.0, cihc=1.0)
 
 Simulates synapse output for a given inner hair cell input
 
 # Arguments
 - `input::Array{Float64, 1}`: input hair cell potential (from sim_ihc_zbc2014)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
+- `fs::Float64`: sampling rate of the *input* in Hz
+- `fs_synapse::Float64`: sampling rate of the interior synapse simulation. Due to several considerations, acceptable values for this parameter are highly limited... TODO 
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `frac_noise::String`: controls whether we use true or approximate fractional Gaussian noise implementation, one of ("actual", "approximate")
 
@@ -71,7 +74,8 @@ Simulates synapse output for a given inner hair cell input
 - `output::Array{Float64, 1}`: synapse output (unknown units?)
 """
 function sim_synapse_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
-                        fiber_type::String="high", frac_noise::String="approximate")
+                             fs_synapse::Float64=10e3,
+                             fiber_type::String="high", frac_noise::String="approximate")
     # Map fiber type string to float code expected by Synapse!
     spont = Dict([("low", 0.1), ("medium", 4.0), ("high", 100.0)])[fiber_type]
     # Map fractional noise implementation type to float code expected by Syanpse!
@@ -79,7 +83,7 @@ function sim_synapse_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=
     # Create empty array for output
     output = zeros((length(input), ))
     # Make call
-    Synapse!(input, 1.0/fs, cf, Int32(length(input)), Int32(1), spont, 1.0, implnt, fs, output)
+    Synapse!(input, 1.0/fs, cf, Int32(length(input)), Int32(1), spont, 1.0, implnt, fs_synapse, output)
     # Return
     return output
 end

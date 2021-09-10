@@ -13,7 +13,7 @@ using Statistics
 using DSP
 
 # Declare various constants that hold across all tests in this file
-fs = 100000.0
+fs = 100_000.0
 dur = 0.1
 freq = 1000.0
 pt = ASU.scale_dbspl(ASU.pure_tone(freq, 0.0, dur, fs), 50.0)
