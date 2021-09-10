@@ -9,12 +9,17 @@ void test_change_input_vector(double *input) {
     input[0] = 99.99;
 }
 
-void test_manipulate_cvector_with_julia_function(double *output, double *(*testfunc)(double *)) {
+void test_manipulate_cvector_with_julia_function(void(*testfunc)(double *)) {
     /* Create vector of zeros here */
     double *input; 
     input = (double*)calloc((int) 10, sizeof(double));
 
     /* Call testfunc here */
-    output = testfunc(input);
+    testfunc(input);
     free(input);
+}
+
+void test_manipulate_julia_vector_with_julia_function(double *input, void(*testfunc)(double *)) {
+    /* Call testfunc here */
+    testfunc(input);
 }

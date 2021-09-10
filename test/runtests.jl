@@ -18,48 +18,11 @@ dur = 0.1
 freq = 1000.0
 pt = ASU.scale_dbspl(ASU.pure_tone(freq, 0.0, dur, fs), 50.0)
 tol = 1e-2
-const libihc = "/home/daniel/AuditoryNerveFiber.jl/external/libihc.so"
-
-# First, we will test the super simplified C in test.c 
-@testset "test.c" begin
-    # Start by trying to call test_change_input_vector and checking it works
-    @test begin
-        x = zeros(5000)
-        ccall((:test_change_input_vector, libihc), Cvoid, (Ptr{Cdouble}, ), x)
-        x[1] == 99.99
-    end
-    # Next, we write a function we pass to test_manipulate_cvector_with_julia_function
-    @test begin
-        # Create output vector
-        output = zeros(5000)
-        # Write function in Julia 
-        function testfunc(input::Array{Float64, 1})::Array{Float64, 1}
-            input[1] = 99.99
-        end
-        # Call 
-        ccall((:test_manipulate_cvector_with_julia_function, libihc), Cvoid, (Ptr{Cdouble}, Ptr{Cvoid}), output, @cfunction(testfunc, Vector{Cdouble}, (Vector{Cdouble}, )))
-    end
-end
 
 # Test ffGn
 #@test begin
 #    sample = ANF.ffGn(Int32(10000), 1/fs, 0.75, 1.0, 1.0)
 #end
-
-# Test decimate function
-@testset "Decimate" begin
-    # First, we should test DSP.resample to make sure it does what we want
-    @test begin
-        # Decimate pure tone by factor of five
-        pt_resampled = resample(pt, 1/5)  
-        (length(pt_resampled) == 2000) && (maximum(pt_resampled[:] - pt[1:5:length(pt)]) < tol)
-    end
-# Start by testing functions we will be passing into the C code
-@testset "C functions" begin
-    x_pt = pointer(pt)
-    y_pt = ANF.decimate(x_pt, Int32(length(x_pt)), Int32(5))
-    y = unsafe_wrap(Array, y_pt, Int(round(length(x_pt)/5)))
-end
 
 # Start by testing the direct bindings and just make sure that they run!
 @testset "C bindings: check callable" begin
@@ -157,9 +120,10 @@ end
     end
     # Check that auditory nerve response shows expected pattern of results with changing spontaneous rate
     @test begin
-        ihcout = ANF.sim_ihc_zbc2014(pt, freq)
-        output = map(Statistics.mean, [ANF.sim_an_zbc2014(ihcout, freq, fiber_type=_type)[1] for _type in ["low", "medium", "high"]])
-        output[3] > output[2] > output[1]
+        low = mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, freq), freq; fiber_type="low")[1])
+        medium = mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, freq), freq; fiber_type="medium")[1])
+        high = mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, freq), freq; fiber_type="high")[1])
+        low < medium < high
     end
     # Check that auditory nerve shows reasonable rate-level function (e.g., range from 10 to 30 dB is constantly increasing)
     @test begin
@@ -178,13 +142,13 @@ end
     # Check that synapse shows reasonable frequency tuning
     @test begin
         cfs = ASU.LogRange(200.0, 5000.0, 40)
-        tuning_curve = map(cf -> mean(ANF.sim_synapse_zbc2014(pt, cf)), cfs)
+        tuning_curve = map(cf -> mean(ANF.sim_synapse_zbc2014(ANF.sim_ihc_zbc2014(pt, cf), cf)), cfs)
         abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
     end
     # Check that auditory nerve shows reasonable frequency tuning
     @test begin
         cfs = ASU.LogRange(200.0, 5000.0, 40)
-        tuning_curve = map(cf -> mean(ANF.sim_an_zbc2014(pt, cf)[1]), cfs)
+        tuning_curve = map(cf -> mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, cf), cf)[1]), cfs)
         abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
     end
 end
