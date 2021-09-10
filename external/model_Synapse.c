@@ -180,8 +180,6 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
   n2 = (double*)calloc((long) ceil((totalstim*nrep+2*delaypoint)*tdres*sampFreq),sizeof(double));
   n3 = (double*)calloc((long) ceil((totalstim*nrep+2*delaypoint)*tdres*sampFreq),sizeof(double));
 
-  sampIHC = (double*)calloc((long) ceil((totalstim*nrep+2*delaypoint)*tdres*sampFreq),sizeof(double));
-
   /*----------------------------------------------------------*/
   /*------- Parameters of the Power-law function -------------*/
   /*----------------------------------------------------------*/
@@ -281,11 +279,7 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
   /*------ Downsampling to sampFreq (Low) sampling rate ------*/
   /*----------------------------------------------------------*/
   /* Call the function pointer passed in as decimate, which is a Julia function */
-  //sampIHC = decimate(powerLawIn, k, resamp);
-  for (indx = 0; indx < floor((totalstim * nrep + 2 * delaypoint) * tdres * sampFreq); indx++) 
-  {
-    sampIHC[indx] = powerLawIn[(indx-1)*resamp + 1]; 
-  };
+  sampIHC = decimate(powerLawIn, k, resamp);
 
   free(powerLawIn); free(exponOut);
 
@@ -360,7 +354,6 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
     synSampOut[k] = sout1[k] + sout2[k];
     k = k+1;
   }   /* end of all samples */
-  free(sampIHC);
   free(sout1); free(sout2);
   free(m1); free(m2); free(m3); free(m4); free(m5); free(n1); free(n2); free(n3);
 
