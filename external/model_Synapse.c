@@ -45,14 +45,14 @@
         Ibrahim, R. A., and Bruce, I. C. (2010). "Effects of peripheral tuning
   on the auditory nerve's representation of speech envelope and temporal fine
   structure cues," in The Neurophysiological Bases of Auditory Perception, eds.
-  E. A. Lopez-Poveda and A. R. Palmer and R. Meddis, Springer, NY, pp. 429–438.
+  E. A. Lopez-Poveda and A. R. Palmer and R. Meddis, Springer, NY, pp. 429ï¿½438.
 
    Please cite these papers if you publish any research
    results obtained with this code or any modified versions of this code.
 
    See the file readme.txt for details of compiling and running the model.
 
-   %%% © M. S. Arefeen Zilany (msazilany@gmail.com), Ian C. Bruce
+   %%% ï¿½ M. S. Arefeen Zilany (msazilany@gmail.com), Ian C. Bruce
   (ibruce@ieee.org), Rasha A. Ibrahim, Paul C. Nelson, and Laurel H. Carney -
   November 2013 %%%
 */
@@ -180,6 +180,8 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
   n2 = (double*)calloc((long) ceil((totalstim*nrep+2*delaypoint)*tdres*sampFreq),sizeof(double));
   n3 = (double*)calloc((long) ceil((totalstim*nrep+2*delaypoint)*tdres*sampFreq),sizeof(double));
 
+  sampIHC = (double*)calloc((long) ceil((totalstim*nrep+2*delaypoint)*tdres*sampFreq),sizeof(double));
+
   /*----------------------------------------------------------*/
   /*------- Parameters of the Power-law function -------------*/
   /*----------------------------------------------------------*/
@@ -279,7 +281,11 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
   /*------ Downsampling to sampFreq (Low) sampling rate ------*/
   /*----------------------------------------------------------*/
   /* Call the function pointer passed in as decimate, which is a Julia function */
-  sampIHC = decimate(powerLawIn, k, resamp);
+  //sampIHC = decimate(powerLawIn, k, resamp);
+  for (indx = 0; indx < floor((totalstim * nrep + 2 * delaypoint) * tdres * sampFreq); indx++) 
+  {
+    sampIHC[indx] = powerLawIn[(indx-1)*resamp + 1]; 
+  };
 
   free(powerLawIn); free(exponOut);
 
@@ -354,6 +360,7 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
     synSampOut[k] = sout1[k] + sout2[k];
     k = k+1;
   }   /* end of all samples */
+  free(sampIHC);
   free(sout1); free(sout2);
   free(m1); free(m2); free(m3); free(m4); free(m5); free(n1); free(n2); free(n3);
 
