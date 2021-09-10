@@ -20,8 +20,8 @@ Downsamples a 1D signal of length k by a factor of 1/resamp using DSP.resample
 """
 function decimate(original_signal::Ptr{Cdouble}, k::Int32, resamp::Int32)
     temp_orig = unsafe_wrap(Array, original_signal, k)
-    _resampled = temp_orig[1:resamp:k]
-    #_resampled = resample(temp_orig, 1/resamp)
+    #_resampled = temp_orig[1:resamp:k]
+    _resampled = resample(temp_orig, 1/resamp)
     return pointer(_resampled)
 end
 

@@ -120,9 +120,7 @@ end
     end
     # Check that auditory nerve response shows expected pattern of results with changing spontaneous rate
     @test begin
-        low = mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, freq), freq; fiber_type="low")[1])
-        medium = mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, freq), freq; fiber_type="medium")[1])
-        high = mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, freq), freq; fiber_type="high")[1])
+        (low, medium, high) = map(fiber_type -> mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, freq), freq; fiber_type=fiber_type)[1]), ["low", "medium", "high"])
         low < medium < high
     end
     # Check that auditory nerve shows reasonable rate-level function (e.g., range from 10 to 30 dB is constantly increasing)
