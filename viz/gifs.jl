@@ -5,9 +5,6 @@ using AuditoryNerveFiber
 const ANF = AuditoryNerveFiber
 using Plots
 
-# ===== A few handy functions ========================
-LogRange(a, b, n) = 10 .^ LinRange(log10(a), log10(b), n)
-
 # ===== Plot #1 ======================================
 # Plot ANF response as function of level for pure tone
 # ====================================================
@@ -20,7 +17,9 @@ function plot_an(level)
     x = [zeros(500); x; zeros(500)]
     y = ANF.sim_an_zbc2014(x, 1000.0)[1]
     plot(y[250:2000], ylims=(0, 1500))
-    annotate!((250, 1250, string(round(level; sigdigits=2))))
+    annotate!((250, 1250, string(round(level; sigdigits=2)) * " dB SPL"))
+    xlabel!("Samples")
+    ylabel!("Firing rate (sp/s)")
 end
 
 # Create gif
@@ -33,7 +32,7 @@ gif(anim, fps=10)
 # Plot ANF response as function of CF for pure tone
 # ====================================================
 # Define range of levels
-CFs = LinRange(200.0, 2000.0, 30)
+CFs = ASU.LogRange(200.0, 2000.0, 30)
 
 # Define function that plots what we want
 function plot_an(cf)
@@ -49,7 +48,3 @@ anim = @animate for cf in CFs
     plot_an(cf)
 end
 gif(anim, fps=10)
-
-# excitation pattern
-x = ASU.scale_dbspl(ASU.pure_tone(1000.0, 0.0, 0.1, 100_000.0), 30.0)
-plot(map(cf -> mean(ANF.sim_an_zbc2014(x, cf)[1]), LogRange(200.0, 10000.0, 30)))
