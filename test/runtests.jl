@@ -10,12 +10,14 @@ const ANF = AuditoryNerveFiber
 using AuditorySignalUtils
 const ASU = AuditorySignalUtils
 using Statistics
+using DSP
 
 # Declare various constants that hold across all tests in this file
-fs = 100000.0
+fs = 100_000.0
 dur = 0.1
 freq = 1000.0
 pt = ASU.scale_dbspl(ASU.pure_tone(freq, 0.0, dur, fs), 50.0)
+tol = 1e-2
 
 # Test ffGn
 #@test begin
@@ -118,9 +120,8 @@ end
     end
     # Check that auditory nerve response shows expected pattern of results with changing spontaneous rate
     @test begin
-        ihcout = ANF.sim_ihc_zbc2014(pt, freq)
-        output = map(Statistics.mean, [ANF.sim_an_zbc2014(ihcout, freq, fiber_type=_type)[1] for _type in ["low", "medium", "high"]])
-        output[3] > output[2] > output[1]
+        (low, medium, high) = map(fiber_type -> mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, freq), freq; fiber_type=fiber_type)[1]), ["low", "medium", "high"])
+        low < medium < high
     end
     # Check that auditory nerve shows reasonable rate-level function (e.g., range from 10 to 30 dB is constantly increasing)
     @test begin
@@ -129,5 +130,23 @@ end
         outputs = [ANF.sim_an_zbc2014(ihcout, freq)[1] for ihcout in ihcouts]
         means = map(Statistics.mean, outputs)
         means[5] > means[4] > means[3] > means[2] > means[1]
+    end
+    # Check that IHC shows reasonable frequency tuning
+    @test begin
+        cfs = ASU.LogRange(200.0, 5000.0, 40)
+        tuning_curve = map(cf -> mean(ANF.sim_ihc_zbc2014(pt, cf)), cfs)
+        abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
+    end
+    # Check that synapse shows reasonable frequency tuning
+    @test begin
+        cfs = ASU.LogRange(200.0, 5000.0, 40)
+        tuning_curve = map(cf -> mean(ANF.sim_synapse_zbc2014(ANF.sim_ihc_zbc2014(pt, cf), cf)), cfs)
+        abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
+    end
+    # Check that auditory nerve shows reasonable frequency tuning
+    @test begin
+        cfs = ASU.LogRange(200.0, 5000.0, 40)
+        tuning_curve = map(cf -> mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, cf), cf)[1]), cfs)
+        abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
     end
 end
