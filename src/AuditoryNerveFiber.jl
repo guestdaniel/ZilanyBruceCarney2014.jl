@@ -3,6 +3,8 @@ using DSP
 using FFTW
 using AuditorySignalUtils
 const ASU = AuditorySignalUtils
+using libzbc2014_jll
+
 
 """
     ffGn(N, tdres, Hinput, noiseType, mu, sigma)
@@ -12,6 +14,7 @@ Synthesizes a sample of fractional Gaussian noise of length N. Presently it just
 function ffGn(N::Int32)
     return zeros((N, ))
 end
+
 
 """
     decimate(original_signal, k, resamp)
@@ -25,8 +28,6 @@ function decimate(original_signal::Ptr{Cdouble}, k::Int32, resamp::Int32)
     return pointer(_resampled)
 end
 
-# Declare the location of the shared C library
-const libihc = "/home/daniel/AuditoryNerveFiber.jl/external/libihc.so"
 
 """
     sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="cat")
@@ -147,7 +148,7 @@ automatically by Julia, there are no sanity checks on any arguments.
 function IHCAN!(px::Array{Float64, 1}, cf::Float64, nrep::Int32, tdres::Float64,
                 totalstim::Int32, cohc::Float64, cihc::Float64, species::Int32,
                 ihcout::Array{Float64, 1})
-    ccall((:IHCAN, libihc), Cvoid, (Ptr{Cdouble}, Cdouble, Cint, Cdouble, Cint,
+    ccall((:IHCAN, libzbc2014), Cvoid, (Ptr{Cdouble}, Cdouble, Cint, Cdouble, Cint,
                                     Cdouble, Cdouble, Cint, Ptr{Cdouble}),
           px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout)
 end
@@ -179,7 +180,7 @@ function Synapse!(ihcout::Array{Float64, 1}, tdres::Float64, cf::Float64,
                   totalstim::Int32, nrep::Int32, spont::Float64,
                   noiseType::Float64, implnt::Float64, sampFreq::Float64,
                   synouttmp::Array{Float64, 1})
-    ccall((:Synapse, libihc), Cdouble, (Ptr{Cdouble}, Cdouble, Cdouble, Cint,
+    ccall((:Synapse, libzbc2014), Cdouble, (Ptr{Cdouble}, Cdouble, Cdouble, Cint,
                                         Cint, Cdouble, Cdouble, Cdouble, Cdouble,
                                         Ptr{Cdouble}, Ptr{nothing}, Ptr{nothing}),
           ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq,
@@ -215,7 +216,7 @@ function SingleAN!(ihcout::Array{Float64, 1}, cf::Float64, nrep::Int32,
                    noiseType::Float64, implnt::Float64,
                    meanrate::Array{Float64, 1}, varrate::Array{Float64, 1},
                    psth::Array{Float64, 1})
-    ccall((:SingleAN, libihc), Cvoid, (Ptr{Cdouble}, Cdouble, Cint, Cdouble,
+    ccall((:SingleAN, libzbc2014), Cvoid, (Ptr{Cdouble}, Cdouble, Cint, Cdouble,
                                        Cint, Cdouble, Cdouble, Cdouble,
                                        Ptr{Cdouble}, Ptr{Cdouble},
                                        Ptr{Cdouble}, Ptr{nothing}, Ptr{nothing}),
