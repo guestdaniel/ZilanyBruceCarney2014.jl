@@ -11,6 +11,15 @@ CurrentModule = AuditoryNerveFiber
 
 Wrappers are functions that "wrap" around lower-level bindings and/or implementations and provide more convenience than the bindings themselves.
 For example, when calling wrappers a user should never have to worry about handling pointers, pre-allocating arrays, etc.
+These are the functions that most users will want to use in their own code.
+Presently, the wrappers provide access to the Zilany, Bruce, and Carney (2014) auditory-nerve model and all share the same basic signature:
+
+```julia
+func(input, cf; kwargs)
+```
+
+where the input is a 1D array, cf is a characteristic frequency in Hz, and kwargs are various other parameters that have default values.
+Below, you can see each of the wrappers documented below, but you can also head over to [Examples](@ref) to see examples of how these functions can be used.
 
 ```@docs
 sim_ihc_zbc2014

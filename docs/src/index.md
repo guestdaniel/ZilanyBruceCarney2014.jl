@@ -9,9 +9,3 @@ This is the documentation for AuditoryNerveFiber.jl, and here you can learn abou
 ```@meta
 CurrentModule = AuditoryNerveFiber
 ```
-
-```@docs
-sim_ihc_zbc2014
-sim_synapse_zbc2014
-sim_an_zbc2014
-```
