@@ -19,11 +19,12 @@ end
 """
     decimate(original_signal, k, resamp)
 
-Downsamples a 1D signal of length k by a factor of 1/resamp using DSP.resample
+Downsamples a 1D signal of length k by a factor of 1/resamp.
+
+This function is NOT intended to be called by a Julia user on a Julia array. Rather, this function accepts a pointer to an array and returns a pointer to the output array. It is intended to be passed as an argument to a function in C where it is called. 
 """
 function decimate(original_signal::Ptr{Cdouble}, k::Int32, resamp::Int32)
     temp_orig = unsafe_wrap(Array, original_signal, k)
-    #_resampled = temp_orig[1:resamp:k]
     _resampled = resample(temp_orig, 1/resamp)
     return pointer(_resampled)
 end
@@ -67,7 +68,7 @@ Simulates synapse output for a given inner hair cell input
 - `input::Array{Float64, 1}`: input hair cell potential (from sim_ihc_zbc2014)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `fs::Float64`: sampling rate of the *input* in Hz
-- `fs_synapse::Float64`: sampling rate of the interior synapse simulation. Due to several considerations, acceptable values for this parameter are highly limited... TODO 
+- `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `frac_noise::String`: controls whether we use true or approximate fractional Gaussian noise implementation, one of ("actual", "approximate")
 
@@ -75,8 +76,7 @@ Simulates synapse output for a given inner hair cell input
 - `output::Array{Float64, 1}`: synapse output (unknown units?)
 """
 function sim_synapse_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
-                             fs_synapse::Float64=10e3,
-                             fiber_type::String="high", frac_noise::String="approximate")
+                             fs_synapse::Float64=10e3, fiber_type::String="high", frac_noise::String="approximate")
     # Map fiber type string to float code expected by Synapse!
     spont = Dict([("low", 0.1), ("medium", 4.0), ("high", 100.0)])[fiber_type]
     # Map fractional noise implementation type to float code expected by Syanpse!
@@ -91,7 +91,7 @@ end
 
 
 """
-    sim_an_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0)
+    sim_an_zbc2014(input, cf; fs=10e4, fiber_type="high", cohc=1.0, cihc=1.0)
 
 Simulates auditory nerve output (spikes or firing rate) for a given inner hair cell input
 
@@ -129,10 +129,7 @@ end
 
 Direct binding to IHCAN C function in model_IHC.c
 
-Passes arguments directly to IHCAN using ccall. Arrays are converted to pointers,
-functions are converted to pointers, and all other types are converted directly
-to corresponding types in C. Note that while there are type checks enforced
-automatically by Julia, there are no sanity checks on any arguments.
+Passes arguments directly to IHCAN using ccall. Arrays are converted to pointers, functions are converted to pointers, and all other types are converted directly to corresponding types in C. Note that while there are type checks enforced automatically by Julia, there are no sanity checks on any arguments.
 
 # Arguments
 - `px::Array{Float64, 1}`: sound pressure waveform in pascals
@@ -159,10 +156,7 @@ end
 
 Direct binding to Synapse C function in model_Synapse.c
 
-Passes arguments directly to Synapse using ccall. Arrays are converted to pointers,
-functions are converted to pointers, and all other types are converted directly
-to corresponding types in C. Note that while there are type checks enforced
-automatically by Julia, there are no sanity checks on any arguments.
+Passes arguments directly to Synapse using ccall. Arrays are converted to pointers, functions are converted to pointers, and all other types are converted directly to corresponding types in C. Note that while there are type checks enforced automatically by Julia, there are no sanity checks on any arguments.
 
 # Arguments
 - `ihcout::Array{Float64, 1}`: output from IHC simulation (`IHCAN!`)
@@ -193,10 +187,7 @@ end
 
 Direct binding to Synapse C function in model_Synapse.c
 
-Passes arguments directly to Synapse using ccall. Arrays are converted to pointers,
-functions are converted to pointers, and all other types are converted directly
-to corresponding types in C. Note that while there are type checks enforced
-automatically by Julia, there are no sanity checks on any arguments.
+Passes arguments directly to Synapse using ccall. Arrays are converted to pointers, functions are converted to pointers, and all other types are converted directly to corresponding types in C. Note that while there are type checks enforced automatically by Julia, there are no sanity checks on any arguments.
 
 # Arguments
 - `ihcout::Array{Float64, 1}`: output from IHC simulation (`IHCAN!`)
