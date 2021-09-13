@@ -32,6 +32,10 @@ Currently, for the Zilany, Bruce, and Carney (2014) model, two "levels" of funct
 - The first is a set of low-level bindings which emulate the function signatures of the original C functions and directly pass their inputs to a `ccall`. These include `IHCAN!`, `Synapse!`, and `SingleAN!` (the exclamation marks indicate that they operate on their arguments in-place, just as the original functions do). 
 - The second is a set of more convenient wrappers written for end-users. These functions insulate end-users from seeing the "guts" of calling C, handling pointers, etc., and instead look and feel just like any other Julia function. These include `sim_ihc_zbc2014`, `sim_synapse_zbc2014`, and `sim_an_sbc2014`, to simulate inner-hair-cell, synapse, and auditory-nerve responses, respectively. Users should default to using these functions to simulate responses. 
 
+# License
+
+AuditoryNerveFiber.jl is licensed under the [MIT license](https://opensource.org/licenses/MIT). 
+
 # References
 - Zilany, M. S. A., Bruce, I. C., & Carney, L. H. (2014). Updated parameters and
   expanded simulation options for a model of the auditory periphery. The Journal
