@@ -66,7 +66,7 @@ plot(freqs, results, ylabel="Firing rate (sp/s)", xlabel="Frequency (Hz)", xscal
 ## Extending functions with multiple dispatch
 
 The available interface may not always satisfy your needs.
-For example, you may need to simulate responses at several CFs but the default method for [`sim_an_zbc2014`](@ref) is only defined for a scalar CF parameter.
+For example, you may need to simulate responses at several CFs but the default method for [`sim_ihc_zbc2014`](@ref) is only defined for a scalar CF parameter.
 With Julia's multiple dispatch system, you can readily define your own extensions to the methods provided by AuditoryNerveFiber.jl.
 Rather than define methods for common use cases in this package, we defer to the user or packages that extend this package to define methods that suit their needs (i.e., this package is merely a thin implementation of underlying models and not a modeling toolbox). 
 
@@ -94,7 +94,40 @@ level = 50.0    # level, dB SPL
 pure_tone = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
 # Simulate IHC response at several CFs
 results = ANF.sim_ihc_zbc2014(pure_tone, cfs)
-plot(results, layout=3, labels="CF = " .* string.(hcat(cfs...)))
+plot([result[1:1000] for result in results], layout=3, labels="CF = " .* string.(hcat(cfs...)))
 ```
 
 
+## Plotting neurograms
+
+Neurograms are likewise easy to generate, so long as we organize the simulations correctly.
+Here, we define the same method for [`sim_ihc_zbc2014`](@ref)
+
+```@example
+using AuditoryNerveFiber
+const ANF = AuditoryNerveFiber
+using AuditorySignalUtils
+const ASU = AuditorySignalUtils
+using Plots
+
+# Define extension to vector-valued CF parameters
+function ANF.sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Array{Float64, 1})
+    map(_cf -> ANF.sim_ihc_zbc2014(input, _cf), cf)
+end
+
+# Define variables
+freq = 1000.0   # freq, Hz
+cfs = collect(LinRange(200.0, 20000.0, 100))  # CFs, Hz
+phase = 0.0     # starting phase, rads
+dur = 0.2       # duration, seconds
+fs = 10e4       # sampling rate, Hz
+level = 50.0    # level, dB SPL
+
+# Define a function to synthesize a pure tone
+pure_tone = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
+# Simulate IHC response at several CFs
+results = ANF.sim_ihc_zbc2014(pure_tone, cfs)
+
+
+heatmap(transpose(hcat(results...)))
+```
