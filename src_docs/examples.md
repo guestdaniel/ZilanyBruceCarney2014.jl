@@ -78,8 +78,8 @@ const ASU = AuditorySignalUtils
 using Plots
 
 # Define extension to vector-valued CF parameters
-function ANF.sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Array{Float64, 1})
-    map(_cf -> ANF.sim_ihc_zbc2014(input, _cf), cf)
+function ANF.sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Array{Float64, 1}; kwargs...)
+    map(_cf -> ANF.sim_ihc_zbc2014(input, _cf; kwargs...), cf)
 end
 
 # Define variables
@@ -93,7 +93,7 @@ level = 50.0    # level, dB SPL
 # Define a function to synthesize a pure tone
 pure_tone = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
 # Simulate IHC response at several CFs
-results = ANF.sim_ihc_zbc2014(pure_tone, cfs)
+results = ANF.sim_ihc_zbc2014(pure_tone, cfs; species="human")
 plot([result[1:1000] for result in results], layout=3, labels="CF = " .* string.(hcat(cfs...)))
 ```
 
@@ -117,7 +117,7 @@ end
 
 # Define variables
 freq = 1000.0   # freq, Hz
-cfs = collect(LinRange(200.0, 20000.0, 100))  # CFs, Hz
+cfs = collect(ASU.LogRange(200.0, 20000.0, 100))  # CFs, Hz
 phase = 0.0     # starting phase, rads
 dur = 0.2       # duration, seconds
 fs = 10e4       # sampling rate, Hz
@@ -129,5 +129,5 @@ pure_tone = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
 results = ANF.sim_ihc_zbc2014(pure_tone, cfs)
 
 
-heatmap(transpose(hcat(results...)))
+heatmap(transpose(hcat(results...))[:, 1:3000], xlabel="Samples", ylabel="CF (#)")
 ```
