@@ -81,7 +81,8 @@
 void SingleAN(double *px, double cf, int nrep, double tdres, int totalstim,
               double fibertype, double noiseType, double implnt, double *meanrate,
               double *varrate, double *psth, double *(*ffGn)(int),
-              double *(*decimate)(double *, int, int))
+              double *(*decimate)(double *, int, int),
+              double *(*random_numbers)(int))
 {
 	/*Variables for the signal-path, control-path and onward */
 	double *synouttmp,*sptime;
@@ -93,7 +94,7 @@ void SingleAN(double *px, double cf, int nrep, double tdres, int totalstim,
   /* Declarations of the functions used in the program */
   double Synapse(double *, double, double, int, int, double, double, double, double,
                  double *, double *(*)(int), double *(*)(double *, int, int));
-	int SpikeGenerator(double *, double, int, int, double *);
+	int SpikeGenerator(double *, double, int, int, double *, double *(*)(int));
 
   /* Allocate dynamic memory for the temporary variables */
   synouttmp  = (double*)calloc(totalstim*nrep,sizeof(double));
@@ -120,12 +121,12 @@ void SingleAN(double *px, double cf, int nrep, double tdres, int totalstim,
     meanrate[i]    = meanrate[i]/(1+0.75e-3*meanrate[i]);  /* estimated instantaneous mean rate */
 	};
   /*======  Spike Generations ======*/
-  //	nspikes = SpikeGenerator(synouttmp, tdres, totalstim, nrep, sptime);
-  //	for(i = 0; i < nspikes; i++)
-  //	{        
-  //		ipst = (int) (fmod(sptime[i],tdres*totalstim) / tdres);
-  //        psth[ipst] = psth[ipst] + 1;       
-  //	};
+  nspikes = SpikeGenerator(synouttmp, tdres, totalstim, nrep, sptime, random_numbers);
+  for(i = 0; i < nspikes; i++)
+  {        
+    ipst = (int) (fmod(sptime[i],tdres*totalstim) / tdres);
+    psth[ipst] = psth[ipst] + 1;       
+  };
 
   /* Freeing dynamic memory allocated earlier */
   free(sptime);
@@ -382,33 +383,29 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
    http://www.urmc.rochester.edu/smd/Nanat/faculty-research/lab-pages/LaurelCarney/auditory-models.cfm
 */
 
-int SpikeGenerator(double *synouttmp, double tdres, int totalstim, int nrep, double *sptime) 
+int SpikeGenerator(double *synouttmp, double tdres, int totalstim, int nrep, double *sptime,
+                   double *(*random_numbers)(int)) 
 {  
-   	double  c0,s0,c1,s1,dead;
-    int     nspikes,k,NoutMax,Nout,deadtimeIndex,randBufIndex;      
-    double	deadtimeRnd, endOfLastDeadtime, refracMult0, refracMult1, refracValue0, refracValue1;
-    double	Xsum, unitRateIntrvl, countTime, DT;    
+  double  c0,s0,c1,s1,dead;
+  int     nspikes,k,NoutMax,Nout,deadtimeIndex,randBufIndex;      
+  double	deadtimeRnd, endOfLastDeadtime, refracMult0, refracMult1, refracValue0, refracValue1;
+  double	Xsum, unitRateIntrvl, countTime, DT;    
     
-    //mxArray	*randInputArray[1], *randOutputArray[1];
-    double *randNums, *randDims;    
+  double *randNums;
     
-    c0      = 0.5;
+  c0      = 0.5;
 	s0      = 0.001;
 	c1      = 0.5;
 	s1      = 0.0125;
-    dead    = 0.00075;
+  dead    = 0.00075;
     
-    DT = totalstim * tdres * nrep;  /* Total duration of the rate function */
-    Nout = 0;
-    NoutMax = (long) ceil(totalstim*nrep*tdres/dead);    
-       
-    //randInputArray[0] = mxCreateDoubleMatrix(1, 2, //mxREAL);
-    //randDims = mxGetPr(randInputArray[0]);
-    randDims[0] = 1;
-    randDims[1] = NoutMax+1;
-    //mexCallMATLAB(1, randOutputArray, 1, randInputArray, "rand");
-    //randNums = mxGetPr(randOutputArray[0]);
-    randBufIndex = 0;
+  DT = totalstim * tdres * nrep;  /* Total duration of the rate function */
+  Nout = 0;
+  NoutMax = (long) ceil(totalstim*nrep*tdres/dead);    
+
+  /* Generate random numbers by call to Julia function random_numbers */       
+  randNums = random_numbers(NoutMax);
+  randBufIndex = 0;
     
 	/* Calculate useful constants */
 	deadtimeIndex = (long) floor(dead/tdres);  /* Integer number of discrete time bins within deadtime */
@@ -418,8 +415,8 @@ int SpikeGenerator(double *synouttmp, double tdres, int totalstim, int nrep, dou
 	refracMult1 = 1 - tdres/s1;  /* If y1(t) = c1*exp(-t/s1), then y1(t+tdres) = y1(t)*refracMult1 */
 
 	/* Calculate effects of a random spike before t=0 on refractoriness and the time-warping sum at t=0 */
-    endOfLastDeadtime = __max(0,log(randNums[randBufIndex++]) / synouttmp[0] + dead);  /* End of last deadtime before t=0 */
-    refracValue0 = c0*exp(endOfLastDeadtime/s0);     /* Value of first exponential in refractory function */
+  endOfLastDeadtime = __max(0,log(randNums[randBufIndex++]) / synouttmp[0] + dead);  /* End of last deadtime before t=0 */
+  refracValue0 = c0*exp(endOfLastDeadtime/s0);     /* Value of first exponential in refractory function */
 	refracValue1 = c1*exp(endOfLastDeadtime/s1);     /* Value of second exponential in refractory function */
 	Xsum = synouttmp[0] * (-endOfLastDeadtime + c0*s0*(exp(endOfLastDeadtime/s0)-1) + c1*s1*(exp(endOfLastDeadtime/s1)-1));  
         /* Value of time-warping sum */

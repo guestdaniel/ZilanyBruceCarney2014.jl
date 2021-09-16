@@ -108,6 +108,7 @@ end
         true
     end
 end
+
 # Next we check that the outputs are sensible
 @testset "Wrappers: outputs" begin
     # Check that inner hair cell response shows expected hallmarks (response to sinusoid at CF, partial rectification)
@@ -118,10 +119,22 @@ end
         #2 minima is smaller abs val than maxima (consistent with partial rectification in IHC)
         any(output .!= 0) && (abs(minimum(output)) < abs(maximum(output)))
     end
+    # Check that each output of auditory nerve response is present and non-zero
+    @test begin
+        outs = ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, freq), freq)
+        (sum(outs[1]) != 0) && (sum(outs[2]) != 0) && (sum(outs[3]) != 0)
+    end
     # Check that auditory nerve response shows expected pattern of results with changing spontaneous rate
     @test begin
-        (low, medium, high) = map(fiber_type -> mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, freq), freq; fiber_type=fiber_type)[1]), ["low", "medium", "high"])
-        low < medium < high
+        # Check analytic firing rates
+        (low, medium, high) = 
+            map(fiber_type -> mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, freq), freq; fiber_type=fiber_type)[1]), ["low", "medium", "high"])
+        analytic = (low < medium < high)
+        # Check spiking firing rate (note that this approach is not great because it's stochastic and could fail randomly)
+        (low, medium, high) = 
+            map(fiber_type -> mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(pt, freq), freq; fiber_type=fiber_type)[3]), ["low", "medium", "high"])
+        spiking = (low < medium < high)
+        analytic && spiking
     end
     # Check that auditory nerve shows reasonable rate-level function (e.g., range from 10 to 30 dB is constantly increasing)
     @test begin
