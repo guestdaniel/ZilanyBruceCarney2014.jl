@@ -15,8 +15,7 @@ Synthesizes a sample of fractional Gaussian noise of length N. Presently it
 just returns zeros, but functionality will be added soon.
 
 # Warnings
-- Note that this function currently just returns zeros, where it should return fractional 
-Gaussian noise
+- Note that this function currently just returns zeros, where it should return fractional Gaussian noise
 """
 function ffGn(N::Int32)
     return zeros((N, ))
@@ -50,8 +49,7 @@ Simulates inner hair cell potential for given acoustic input.
 - `fs::Float64`: sampling rate in Hz
 - `cohc::Float64`: outer hair cell survival (from 0 to 1)
 - `cihc::Float64`: inner hair cell survival (from 0 to 1)
-- `species::Int32`: species, either (1 = cat, 2 = humans with Shera tuning, 3 = humans with 
-Glasberg tuning)
+- `species::Int32`: species, either (1 = cat, 2 = humans with Shera tuning, 3 = humans with Glasberg tuning)
 
 # Returns
 - `output::Array{Float64, 1}`: inner hair cell potential output
@@ -79,11 +77,9 @@ Simulates synapse output for a given inner hair cell input
 - `input::Array{Float64, 1}`: input hair cell potential (from sim_ihc_zbc2014)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `fs::Float64`: sampling rate of the *input* in Hz
-- `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between 
-fs and fs_synapse must be an integer.
+- `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
-- `frac_noise::String`: controls whether we use true or approximate fractional Gaussian 
-noise implementation, one of ("actual", "approximate")
+- `frac_noise::String`: controls whether we use true or approximate fractional Gaussian noise implementation, one of ("actual", "approximate")
 
 # Returns
 - `output::Array{Float64, 1}`: synapse output (unknown units?)
@@ -114,8 +110,7 @@ Simulates auditory nerve output (spikes or firing rate) for a given inner hair c
 - `input::Array{Float64, 1}`: input hair cell potential (from sim_ihc_zbc2014)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
-- `frac_noise::String`: controls whether we use true or approximate fractional Gaussian 
-noise implementation, one of ("actual", "approximate")
+- `frac_noise::String`: controls whether we use true or approximate fractional Gaussian noise implementation, one of ("actual", "approximate")
 
 # Returns
 - `meanrate::Array{Float64, 1}`: analytical estimate of instantaneous firing rate
@@ -154,15 +149,12 @@ Julia, there are no sanity checks on any arguments.
 # Arguments
 - `px::Array{Float64, 1}`: sound pressure waveform in pascals
 - `cf::Float64`: characteristic frequency of the fiber in Hz
-- `nrep::Int32`: number of repetitions to simulate. Note that for the IHC simulation, 
-one "true" simulation is conducted and then that simulation is copied and tiled 
-(because there is no randomness in the IHC simulation) to simulate multiple times.
+- `nrep::Int32`: number of repetitions to simulate. Note that for the IHC simulation, one "true" simulation is conducted and then that simulation is copied and tiled (because there is no randomness in the IHC simulation) to simulate multiple times.
 - `tdres::Float64`: time-domain resolution (i.e., reciprocal of sampling rate)
 - `totalstim::Int32`: number of samples in simulation
 - `cohc::Float64`: outer hair cell survival (from 0 to 1)
 - `cihc::Float64`: inner hair cell survival (from 0 to 1)
-- `species::Int32`: species, either (1 = cat, 2 = humans with Shera tuning, 3 = humans 
-with Glasberg tuning)
+- `species::Int32`: species, either (1 = cat, 2 = humans with Shera tuning, 3 = humans with Glasberg tuning)
 - `ihcout::Array{Float64, 1}`: array of same size as `px`, used to store output from C
 """
 function IHCAN!(px::Array{Float64, 1}, cf::Float64, nrep::Int32, tdres::Float64,
@@ -191,17 +183,11 @@ Julia, there are no sanity checks on any arguments.
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `totalstim::Int32`: number of samples in simulation
 - `nrep::Int32`: number of repetitions to simulate.
-- `spont::Float64`: spontaneous rate, either (0.1 == low spont fiber, 4.0 == medium spont 
-fiber, 100.0 == high spont fiber)
+- `spont::Float64`: spontaneous rate, either (0.1 == low spont fiber, 4.0 == medium spont fiber, 100.0 == high spont fiber)
 - `noiseType::Float64`: NOT CURRENTLY IMPLEMENTED
-- `implnt::Float64`: whether or not to use exact implementation of fractional Gaussian 
-noise, either (1.0 == use, 0.0 == approximate)
-- `sampFreq::Float64`: sampling frequency of the power law stage in Hz. Simulations are 
-decimated to sampFreq from 1/tdres before the power law stage and then upsampled back to the
- original sampling rate. The product of tdres and sampFreq, which indicates the amount to 
- decimate by, must be an integer
-- `synouttmp::Array{Float64, 1}`: array of same size as `ihcout`, used to store output from 
-C
+- `implnt::Float64`: whether or not to use exact implementation of fractional Gaussian noise, either (1.0 == use, 0.0 == approximate)
+- `sampFreq::Float64`: sampling frequency of the power law stage in Hz. Simulations are decimated to sampFreq from 1/tdres before the power law stage and then upsampled back to the original sampling rate. The product of tdres and sampFreq, which indicates the amount to decimate by, must be an integer
+- `synouttmp::Array{Float64, 1}`: array of same size as `ihcout`, used to store output from C
 """
 function Synapse!(ihcout::Array{Float64, 1}, tdres::Float64, cf::Float64,
                   totalstim::Int32, nrep::Int32, spont::Float64,
@@ -235,14 +221,10 @@ Julia, there are no sanity checks on any arguments.
 - `totalstim::Int32`: number of samples in simulation
 - `fibertype::Float64`: fiber type, either (1.0 == low, 2.0 == med, 3.0 == high)
 - `noiseType::Float64`: NOT CURRENTLY IMPLEMENTED
-- `implnt::Float64`: whether or not to use exact implementation of fractional Gaussian 
-noise, either (1.0 == use, 0.0 == approximate)
-- `meanrate::Array{Float64, 1}`: array of same size as `ihcout`, used to store analytical 
-firing rate output
-- `varrate::Array{Float64, 1}`: array of same size as `ihcout`, used to store analytical 
-firing rate variance output
-- `psth::Array{Float64, 1}`: array of same size as `ihcout`, used to store empirical PSTH 
-output
+- `implnt::Float64`: whether or not to use exact implementation of fractional Gaussian noise, either (1.0 == use, 0.0 == approximate)
+- `meanrate::Array{Float64, 1}`: array of same size as `ihcout`, used to store analytical firing rate output
+- `varrate::Array{Float64, 1}`: array of same size as `ihcout`, used to store analytical firing rate variance output
+- `psth::Array{Float64, 1}`: array of same size as `ihcout`, used to store empirical PSTH output
 """
 function SingleAN!(ihcout::Array{Float64, 1}, cf::Float64, nrep::Int32,
                    tdres::Float64, totalstim::Int32, fibertype::Float64,
