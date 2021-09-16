@@ -21,6 +21,9 @@ func(input, cf; kwargs)
 where the input is a 1D array, cf is a characteristic frequency in Hz, and kwargs are various other parameters that have default values.
 Below, you can see each of the wrappers documented below, but you can also head over to [Examples](@ref) to see examples of how these functions can be used.
 
+!!! warning
+    Not all features of the Zilany, Bruce, and Carney (2014) model are fully available in this version of AuditoryNerveFiber.jl. Notably, spike simulations are not yet available (at the AN stage, only the analytical firing rate estimate can be simulated) and fractional Gaussian noise is also not implemented yet. When used with their default parameters, the functions documented below will return analytic firing rate estimates from the AN stage and be simulated without fractional Gaussian noise.
+
 ```@docs
 sim_ihc_zbc2014
 sim_synapse_zbc2014

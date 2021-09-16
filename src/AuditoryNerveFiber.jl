@@ -49,7 +49,7 @@ Simulates inner hair cell potential for given acoustic input.
 - `fs::Float64`: sampling rate in Hz
 - `cohc::Float64`: outer hair cell survival (from 0 to 1)
 - `cihc::Float64`: inner hair cell survival (from 0 to 1)
-- `species::Int32`: species, either (1 = cat, 2 = humans with Shera tuning, 3 = humans with Glasberg tuning)
+- `species::String`: species, either "cat", "human" (Shera tuning), or "human_glasberg" (Glasberg tuning)
 
 # Returns
 - `output::Array{Float64, 1}`: inner hair cell potential output
@@ -69,7 +69,7 @@ end
 
 
 """
-    sim_synapse_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, cohc=1.0, cihc=1.0)
+    sim_synapse_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, fiber_type="high", frac_noise="approximate")
 
 Simulates synapse output for a given inner hair cell input
 
@@ -102,13 +102,14 @@ end
 
 
 """
-    sim_an_zbc2014(input, cf; fs=10e4, fiber_type="high", cohc=1.0, cihc=1.0)
+    sim_an_zbc2014(input, cf; fs=10e4, fiber_type="high", frac_noise="approximate")
 
 Simulates auditory nerve output (spikes or firing rate) for a given inner hair cell input
 
 # Arguments
-- `input::Array{Float64, 1}`: input hair cell potential (from sim_ihc_zbc2014)
+- `input::Array{Float64, 1}`: input hair cell potential (from `sim_ihc_zbc2014`)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
+- `fs::Float64`: sampling rate of the *input* in Hz
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `frac_noise::String`: controls whether we use true or approximate fractional Gaussian noise implementation, one of ("actual", "approximate")
 
