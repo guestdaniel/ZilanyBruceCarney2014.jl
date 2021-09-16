@@ -18,7 +18,7 @@ Presently, the wrappers provide access to the Zilany, Bruce, and Carney (2014) a
 func(input, cf; kwargs)
 ```
 
-where the input is a 1D array, cf is a characteristic frequency in Hz, and kwargs are various other parameters that have default values.
+where the input is a 1D array, cf is a characteristic frequency in Hz, and kwargs are various other parameters that have default values (i.e., you can set them if you want to, but if you don't a default value will be used).
 Below, you can see each of the wrappers documented below, but you can also head over to [Examples](@ref) to see examples of how these functions can be used.
 
 !!! warning
