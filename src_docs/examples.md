@@ -63,6 +63,43 @@ results = map(freq -> mean(anf_response(pure_tone(freq))), freqs)
 plot(freqs, results, ylabel="Firing rate (sp/s)", xlabel="Frequency (Hz)", xscale=:log)
 ```
 
+## Generating spike trains
+
+[`sim_an_zbc2014`](@ref) has multiple outputs. 
+The first is an analytic approximation of the underlying instantaneous firing rate.
+The second is an analytic approximation of the variance of the underlying instantaneous variance.
+The third is a spike train. 
+Here, we can see how to extract and analyze each of these outputs.
+
+```@example
+using AuditoryNerveFiber
+const ANF = AuditoryNerveFiber
+using AuditorySignalUtils
+const ASU = AuditorySignalUtils
+using Plots
+
+# Define variables
+freq = 1000.0   # frequency and CF, Hz
+phase = 0.0     # starting phase, rads
+dur = 0.2       # duration, seconds
+fs = 10e4       # sampling rate, Hz
+level = 50.0    # level, dB SPL
+
+# Synthesize a pure tone
+x = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
+# Simulate response 
+(mean, var, spikes) = ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(x, freq), freq);
+
+# Plot
+l = @layout [a ; b]
+p1 = plot(mean, ylabel="Firing rate (sp/s)", xlabel="Samples")
+p2 = plot(spikes, ylabel="Firing rate (sp/s)", xlabel="Samples")
+plot(p1, p2, layout=l)
+```
+
+The top row shows the analytic firing rate.
+The bottom row shows a single example spike train. 
+
 ## Extending functions with multiple dispatch
 
 The available interface may not always satisfy your needs.
@@ -97,7 +134,6 @@ results = ANF.sim_ihc_zbc2014(pure_tone, cfs; species="human")
 plot([result[1:1000] for result in results], layout=3, labels="CF = " .* string.(hcat(cfs...)))
 ```
 
-
 ## Plotting neurograms
 
 Neurograms are likewise easy to generate, so long as we organize the simulations correctly.
@@ -131,3 +167,4 @@ results = ANF.sim_ihc_zbc2014(pure_tone, cfs)
 
 heatmap(transpose(hcat(results...))[:, 1:3000], xlabel="Samples", ylabel="CF (#)")
 ```
+
