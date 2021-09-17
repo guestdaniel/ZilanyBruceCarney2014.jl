@@ -9,6 +9,16 @@ using libzbc2014_jll
 
 
 """
+    random_numbers(length)
+
+Generates random numbers like MATLAB's rand or Python's numpy.random.rand
+"""
+function random_numbers(n::Int32)
+    return pointer(rand(Float64, n))
+end
+
+
+"""
     ffGn(N, tdres, Hinput, noiseType, mu, sigma)
 
 Synthesizes a sample of fractional Gaussian noise of length N. Presently it 
@@ -194,9 +204,19 @@ function Synapse!(ihcout::Array{Float64, 1}, tdres::Float64, cf::Float64,
                   totalstim::Int32, nrep::Int32, spont::Float64,
                   noiseType::Float64, implnt::Float64, sampFreq::Float64,
                   synouttmp::Array{Float64, 1})
-    ccall((:Synapse, libzbc2014), Cdouble, (Ptr{Cdouble}, Cdouble, Cdouble, Cint,
-                                        Cint, Cdouble, Cdouble, Cdouble, Cdouble,
-                                        Ptr{Cdouble}, Ptr{nothing}, Ptr{nothing}),
+    ccall((:Synapse, libzbc2014), Cdouble, 
+          (Ptr{Cdouble}, # ihcout
+           Cdouble,      # tdres
+           Cdouble,      # cf
+           Cint,         # totalstim
+           Cint,         # nrep
+           Cdouble,      # spont
+           Cdouble,      # noiseType
+           Cdouble,      # implnt
+           Cdouble,      # sampFreq
+           Ptr{Cdouble}, # synouttmp
+           Ptr{nothing}, # ffGn
+           Ptr{nothing}),# decimate
           ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq,
           synouttmp, @cfunction(ffGn, Vector{Cdouble}, (Cint, )), 
           @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)))
@@ -232,13 +252,25 @@ function SingleAN!(ihcout::Array{Float64, 1}, cf::Float64, nrep::Int32,
                    noiseType::Float64, implnt::Float64,
                    meanrate::Array{Float64, 1}, varrate::Array{Float64, 1},
                    psth::Array{Float64, 1})
-    ccall((:SingleAN, libzbc2014), Cvoid, (Ptr{Cdouble}, Cdouble, Cint, Cdouble,
-                                       Cint, Cdouble, Cdouble, Cdouble,
-                                       Ptr{Cdouble}, Ptr{Cdouble},
-                                       Ptr{Cdouble}, Ptr{nothing}, Ptr{nothing}),
+    ccall((:SingleAN, libzbc2014), Cvoid, 
+          (Ptr{Cdouble},  # ihcout
+           Cdouble,       # cf
+           Cint,          # nrep
+           Cdouble,       # tdres
+           Cint,          # totalstim
+           Cdouble,       # fibertype
+           Cdouble,       # noiseType
+           Cdouble,       # implnt
+           Ptr{Cdouble},  # meanrate
+           Ptr{Cdouble},  # varrate
+           Ptr{Cdouble},  # psth
+           Ptr{nothing},  # ffGn
+           Ptr{nothing},  # decimate
+           Ptr{nothing}), # random_numbers
           ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt,
           meanrate, varrate, psth, @cfunction(ffGn, Vector{Cdouble}, (Cint, )), 
-          @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)))
+          @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)),
+          @cfunction(random_numbers, Ptr{Cdouble}, (Cint, )))
 end
 
 end # module
