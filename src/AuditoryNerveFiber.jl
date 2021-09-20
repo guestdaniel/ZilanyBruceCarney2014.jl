@@ -33,6 +33,22 @@ end
 
 
 """
+    upsample(original_signal, resamp)
+
+Upsamples a 1D signal by a factor of resamp. 
+
+# Warnings
+- This function is (very marginally) affected by a known issue with DSP.resample. The function uses DSP.resample and pads a few zeros to compensate for the few samples gobbled by the upsampling filter (see issue at https://github.com/JuliaDSP/DSP.jl/issues/104).
+"""
+function upsample(original_signal::Array{Float64, 1}, resamp::Int64)
+    # Directly upsample using DSP.resample
+    upsampled_signal = DSP.resample(original_signal, resamp)
+    upsampled_signal = [upsampled_signal; zeros(length(original_signal)*resamp - length(upsampled_signal))]
+    # Return
+    return upsampled_signal
+end
+
+"""
     decimate(original_signal, k, resamp)
 
 Downsamples a 1D signal of length k by a factor of 1/resamp.
