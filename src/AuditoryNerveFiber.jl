@@ -19,16 +19,90 @@ end
 
 
 """
-    ffGn(N, tdres, Hinput, noiseType, mu, sigma)
+    ffGn(N)
 
-Synthesizes a sample of fractional Gaussian noise of length N. Presently it 
-just returns zeros, but functionality will be added soon.
+Return an array of zeros (as a standin for a real ffGn function).
 
 # Warnings
 - Note that this function currently just returns zeros, where it should return fractional Gaussian noise
 """
 function ffGn(N::Int32)
     return zeros((N, ))
+end
+
+
+""" 
+    ffGn_real(N)
+
+Synthesize a sample of fractional Gaussian noise.
+
+This is a direct translation of Python code written by Marek Rudnicki in the cochlea package
+(https://github.com/mrkrd/cochlea).
+"""
+function ffGn(N::Int32, tdres::Float64, Hinput::Float64, noiseType::Float64, mu::Float64; safety::Int64=4)
+    # Start by handling noiseType
+    if noiseType == 0
+        return zeros(N)
+    end
+
+    # If noiseType != 0, we're synthesizing fractional Gaussian noise
+    # First, we downsample the number of points 
+    resamp = Int(ceil(1e-1 / tdres))
+    nop = N
+    N = Int(ceil(N / resamp) + 1)
+    if N < 10
+        N = 10
+    end
+
+    # Next, determine if fGn or fBm should be produced
+    if Hinput < 1.0
+        H = Hinput
+        fBn = false
+    else
+        H = Hinput - 1
+        fBn = true
+    end
+
+    # Calculate fGn
+    if H == 0.5
+        y = randn(N)
+    else
+        Nfft = Int(2 ^ ceil(log2(2*(N-1))))
+        NfftHalf = Int(round(Nfft / 2))
+
+        k = [0:(NfftHalf-1); NfftHalf:-1:1]
+        Zmag = 0.5 * ( (k.+1) .^ (2*H) -2*k .^ (2*H) + abs.(k .- 1) .^ (2*H))
+
+        Zmag = real.(fft(Zmag))
+        Zmag = sqrt.(Zmag)
+
+        Z = Zmag .* (randn(Nfft) + randn(Nfft) .* 1im)
+
+        y = real.(ifft(Z)) * sqrt(Nfft)
+
+        y = y[1:(N+safety)]
+    end
+
+    # Convert fGn to fBn if needed
+    if fBn == 1.0
+        y = cumsum(y)
+    end
+
+    # Resample to match AN model
+    y = upsample(y, resamp)
+
+    # Handle mu and sigma
+    if mu < 0.5
+        sigma = 3.0
+    elseif mu < 18.0
+        sigma = 30.0
+    else
+        sigma = 200.0
+    end
+    y = sigma .* y 
+
+    # Return 
+    return y[1:nop]
 end
 
 

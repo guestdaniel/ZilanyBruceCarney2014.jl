@@ -20,9 +20,24 @@ pt = ASU.scale_dbspl(ASU.pure_tone(freq, 0.0, dur, fs), 50.0)
 tol = 1e-2  # general tolerance on comparisons of approximate equality (should upgrade to isapprox)
 
 # Test ffGn
-#@test begin
-#    sample = ANF.ffGn(Int32(10000), 1/fs, 0.75, 1.0, 1.0)
-#end
+@testset "Fractional Gaussian noise" begin
+    # Test that we can call the function
+    @test begin
+        sample = ANF.ffGn(Int32(10000), 1/fs, 0.75, 1.0, 1.0)
+        true
+    end
+    # Test that the noiseType switch behaves as expect
+    @test begin
+        sample = ANF.ffGn(Int32(10000), 1/fs, 0.75, 0.0, 1.0)
+        all(sample .== 0.0)
+    end
+    # Test that raising the mean to the branch points in the code (0.5, 18.0 results in 
+    # corresponding changes in sigma
+    @test begin
+        vars = map(mu -> std(ANF.ffGn(Int32(100000), 1/fs, 0.75, 1.0, mu)), [0.4, 10.0, 20.0])
+        vars[1] < vars[2] < vars[3]
+    end
+end
 
 # Test upsampling function
 @test begin
