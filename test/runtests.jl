@@ -29,12 +29,14 @@ tol = 1e-2  # general tolerance on comparisons of approximate equality (should u
     # Test that the noiseType switch behaves as expect
     @test begin
         sample = ANF.ffGn(Int32(10000), 1/fs, 0.75, 0.0, 1.0)
+        sample = unsafe_wrap(Array, sample, 10000)
         all(sample .== 0.0)
     end
     # Test that raising the mean to the branch points in the code (0.5, 18.0 results in 
     # corresponding changes in sigma
     @test begin
-        vars = map(mu -> std(ANF.ffGn(Int32(100000), 1/fs, 0.75, 1.0, mu)), [0.4, 10.0, 20.0])
+        myfunc(mu) = std(unsafe_wrap(Array, ANF.ffGn(Int32(100000), 1/fs, 0.75, 1.0, mu), 100000))
+        vars = map(myfunc, [0.4, 10.0, 20.0])
         vars[1] < vars[2] < vars[3]
     end
 end
