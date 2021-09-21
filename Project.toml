@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [deps]
 AuditorySignalUtils = "20759599-9703-4078-b9af-37a489742e5c"
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 BinaryBuilder = "12aac903-9f7c-5d81-afc2-d9565ea332ae"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
