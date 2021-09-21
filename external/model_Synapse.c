@@ -80,7 +80,8 @@
 
 void SingleAN(double *px, double cf, int nrep, double tdres, int totalstim,
               double fibertype, double noiseType, double implnt, double *meanrate,
-              double *varrate, double *psth, double *(*ffGn)(int),
+              double *varrate, double *psth, 
+              double *(*ffGn)(int, double, double, double, double),
               double *(*decimate)(double *, int, int),
               double *(*random_numbers)(int))
 {
@@ -92,8 +93,9 @@ void SingleAN(double *px, double cf, int nrep, double tdres, int totalstim,
   double sampFreq = 10e3; /* Sampling frequency used in the synapse */
 
   /* Declarations of the functions used in the program */
-  double Synapse(double *, double, double, int, int, double, double, double, double,
-                 double *, double *(*)(int), double *(*)(double *, int, int));
+  double Synapse(double *, double, double, int, int, double, double, double, double, double *, 
+                 double *(*)(int, double, double, double, double), 
+                 double *(*)(double *, int, int));
 	int SpikeGenerator(double *, double, int, int, double *, double *(*)(int));
 
   /* Allocate dynamic memory for the temporary variables */
@@ -141,7 +143,8 @@ void SingleAN(double *px, double cf, int nrep, double tdres, int totalstim,
 /* --------------------------------------------------------------------------------------------*/
 double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
                double spont, double noiseType, double implnt, double sampFreq,
-               double *synouttmp, double *(*ffGn)(int), double*(*decimate)(double *, int, int))
+               double *synouttmp, double *(*ffGn)(int, double, double, double, double), 
+               double*(*decimate)(double *, int, int))
 {
   /* Initalize Variables */
   int z, b;
@@ -191,13 +194,7 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
   /*----------------------------------------------------------*/
   /*------- Generating a random sequence ---------------------*/
   /*----------------------------------------------------------*/
-  randNums = ffGn((int)ceil((totalstim * nrep + 2 * delaypoint) * tdres * sampFreq));
-  // randNums = (*ffGn)(100);
-  //    randNums = ffGn((int)ceil((totalstim * nrep + 2 * delaypoint) * tdres
-  //    * sampFreq));
-  //        ffGn((int)ceil((totalstim * nrep + 2 * delaypoint) * tdres *
-  //        sampFreq),
-  //             1 / sampFreq, 0.9, noiseType, spont);
+  randNums = ffGn((int)ceil((totalstim * nrep + 2 * delaypoint) * tdres * sampFreq), 1 / sampFreq, 0.9, noiseType, spont);
 
   /*----------------------------------------------------------*/
   /*----- Double Exponential Adaptation ----------------------*/

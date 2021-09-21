@@ -32,7 +32,7 @@ end
 
 
 """ 
-    ffGn_real(N)
+    ffGn(N)
 
 Synthesize a sample of fractional Gaussian noise.
 
@@ -42,7 +42,7 @@ This is a direct translation of Python code written by Marek Rudnicki in the coc
 function ffGn(N::Int32, tdres::Float64, Hinput::Float64, noiseType::Float64, mu::Float64; safety::Int64=4)
     # Start by handling noiseType
     if noiseType == 0
-        return zeros(N)
+        return pointer(zeros(N))
     end
 
     # If noiseType != 0, we're synthesizing fractional Gaussian noise
@@ -102,7 +102,7 @@ function ffGn(N::Int32, tdres::Float64, Hinput::Float64, noiseType::Float64, mu:
     y = sigma .* y 
 
     # Return 
-    return y[1:nop]
+    return pointer(y[1:nop])
 end
 
 
@@ -186,15 +186,17 @@ Simulates synapse output for a given inner hair cell input
 """
 function sim_synapse_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
                              fs_synapse::Float64=10e3, fiber_type::String="high", 
-                             frac_noise::String="approximate")
+                             frac_noise::String="approximate", noise_type::String="ffGn")
     # Map fiber type string to float code expected by Synapse!
     spont = Dict([("low", 0.1), ("medium", 4.0), ("high", 100.0)])[fiber_type]
     # Map fractional noise implementation type to float code expected by Syanpse!
     implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[frac_noise]
+    # Map noise type to float code expected by Syanpse!
+    noiseType = Dict([("ffGn", 1.0), ("Gaussian", 0.0)])[noise_type]
     # Create empty array for output
     output = zeros((length(input), ))
     # Make call
-    Synapse!(input, 1.0/fs, cf, Int32(length(input)), Int32(1), spont, 1.0, implnt, 
+    Synapse!(input, 1.0/fs, cf, Int32(length(input)), Int32(1), spont, noiseType, implnt, 
              fs_synapse, output)
     # Return
     return output
@@ -218,17 +220,21 @@ Simulates auditory nerve output (spikes or firing rate) for a given inner hair c
 - `psth::Array{Float64, 1}`: peri-stimulus time histogram (NOT IMPLEMENTED, SHOULD BE EMPTY)
 """
 function sim_an_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
-                        fiber_type::String="high", frac_noise::String="approximate")
+                        fiber_type::String="high", frac_noise::String="approximate",
+                        noise_type::String="ffGn")
+
     # Map fiber type string to float code expected by Synapse!
     fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
     # Map fractional noise implementation type to float code expected by Syanpse!
     implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[frac_noise]
+    # Map noise type to float code expected by Syanpse!
+    noiseType = Dict([("ffGn", 1.0), ("Gaussian", 0.0)])[noise_type]
     # Create empty array for output
     meanrate = zeros((length(input), ))
     varrate = zeros((length(input), ))
     psth = zeros((length(input), ))
     # Make call
-    SingleAN!(input, cf, Int32(1), 1.0/fs, Int32(length(input)), fibertype, 1.0, implnt, 
+    SingleAN!(input, cf, Int32(1), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, 
               meanrate, varrate, psth)
     # Return
     return (meanrate, varrate, psth)
@@ -306,8 +312,8 @@ function Synapse!(ihcout::Array{Float64, 1}, tdres::Float64, cf::Float64,
            Ptr{Cdouble}, # synouttmp
            Ptr{nothing}, # ffGn
            Ptr{nothing}),# decimate
-          ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq,
-          synouttmp, @cfunction(ffGn, Vector{Cdouble}, (Cint, )), 
+          ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp, 
+          @cfunction(ffGn, Ptr{Cdouble}, (Cint, Cdouble, Cdouble, Cdouble, Cdouble)), 
           @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)))
 end
 
@@ -357,7 +363,8 @@ function SingleAN!(ihcout::Array{Float64, 1}, cf::Float64, nrep::Int32,
            Ptr{nothing},  # decimate
            Ptr{nothing}), # random_numbers
           ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt,
-          meanrate, varrate, psth, @cfunction(ffGn, Vector{Cdouble}, (Cint, )), 
+          meanrate, varrate, psth, 
+          @cfunction(ffGn, Ptr{Cdouble}, (Cint, Cdouble, Cdouble, Cdouble, Cdouble)), 
           @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)),
           @cfunction(random_numbers, Ptr{Cdouble}, (Cint, )))
 end
