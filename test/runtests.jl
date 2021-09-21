@@ -134,6 +134,14 @@ end
 
 # Next we check that the outputs are sensible
 @testset "Wrappers: outputs" begin
+    # Check that calling with n_rep > 1 produces expected results (cloning and tiling of response along primary axis)
+    # Note that we need to zero-pad the inputs, otherwise responses will trail over?
+    @test begin
+        output_single = ANF.sim_ihc_zbc2014([zeros(2000); pt; zeros(2000)], freq)
+        output_multiple = ANF.sim_ihc_zbc2014([zeros(2000); pt; zeros(2000)], freq; n_rep=2)
+        first_repeat = all(abs.(output_single - output_multiple[1:14000]) .< tol)
+        second_repeat = all(abs.(output_single - output_multiple[(1:14000).+14000]) .< tol)
+    end
     # Check that inner hair cell response shows expected hallmarks (response to sinusoid at CF, partial rectification)
     @test begin
         output = ANF.sim_ihc_zbc2014(pt, freq)

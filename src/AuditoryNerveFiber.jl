@@ -142,13 +142,14 @@ Simulates inner hair cell potential for given acoustic input.
 - `output::Array{Float64, 1}`: inner hair cell potential output
 """
 function sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
-                         cohc::Float64=1.0, cihc::Float64=1.0, species::String="cat")
+                         cohc::Float64=1.0, cihc::Float64=1.0, species::String="cat",
+                         n_rep::Int64=1)
     # Map species string to species integer expected by IHCAN!
     species_flag = Dict([("cat", 1), ("human", 2), ("human_glasberg", 3)])[species]
     # Create empty array for output
-    output = zeros((length(input), ))
+    output = zeros((length(input)*n_rep, ))
     # Make call
-    IHCAN!(input, cf, Int32(1), 1/fs, Int32(length(input)), cohc, cihc, Int32(species_flag), 
+    IHCAN!(input, cf, Int32(n_rep), 1/fs, Int32(length(input)), cohc, cihc, Int32(species_flag), 
            output);
     # Return
     return output
@@ -173,7 +174,8 @@ Simulates synapse output for a given inner hair cell input
 """
 function sim_synapse_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
                              fs_synapse::Float64=10e3, fiber_type::String="high", 
-                             frac_noise::String="approximate", noise_type::String="ffGn")
+                             frac_noise::String="approximate", noise_type::String="ffGn",
+                             n_rep::Int64=1)
     # Map fiber type string to float code expected by Synapse!
     spont = Dict([("low", 0.1), ("medium", 4.0), ("high", 100.0)])[fiber_type]
     # Map fractional noise implementation type to float code expected by Syanpse!
@@ -183,7 +185,7 @@ function sim_synapse_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=
     # Create empty array for output
     output = zeros((length(input), ))
     # Make call
-    Synapse!(input, 1.0/fs, cf, Int32(length(input)), Int32(1), spont, noiseType, implnt, 
+    Synapse!(input, 1.0/fs, cf, Int32(length(input)), Int32(n_rep), spont, noiseType, implnt, 
              fs_synapse, output)
     # Return
     return output
@@ -208,7 +210,7 @@ Simulates auditory nerve output (spikes or firing rate) for a given inner hair c
 """
 function sim_an_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
                         fiber_type::String="high", frac_noise::String="approximate",
-                        noise_type::String="ffGn")
+                        noise_type::String="ffGn", n_rep::Int64=1)
 
     # Map fiber type string to float code expected by Synapse!
     fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
@@ -221,7 +223,7 @@ function sim_an_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
     varrate = zeros((length(input), ))
     psth = zeros((length(input), ))
     # Make call
-    SingleAN!(input, cf, Int32(1), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, 
+    SingleAN!(input, cf, Int32(n_rep), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, 
               meanrate, varrate, psth)
     # Return
     return (meanrate, varrate, psth)
