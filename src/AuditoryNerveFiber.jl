@@ -18,19 +18,6 @@ function random_numbers(n::Int32)
 end
 
 
-"""
-    ffGn(N)
-
-Return an array of zeros (as a standin for a real ffGn function).
-
-# Warnings
-- Note that this function currently just returns zeros, where it should return fractional Gaussian noise
-"""
-function ffGn(N::Int32)
-    return zeros((N, ))
-end
-
-
 """ 
     ffGn(N)
 
@@ -41,7 +28,7 @@ This is a direct translation of Python code written by Marek Rudnicki in the coc
 """
 function ffGn(N::Int32, tdres::Float64, Hinput::Float64, noiseType::Float64, mu::Float64; safety::Int64=4)
     # Start by handling noiseType
-    if noiseType == 0
+    if noiseType == 0.0
         return pointer(zeros(N))
     end
 
