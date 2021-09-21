@@ -19,6 +19,12 @@ using Plots
     zilanyetal2014_figure1()
 
 This function replicates the right-hand-side of Figure 1 from Zilany, Bruce, and Carney (2014). 
+
+Note that we just examine the direct synapse output instead of simulating spikes and 
+averaging, as it appears was done in the paper. This is so the simulation can be conducted
+very quickly. Here, we use Distributed.pmap to perform the computation over many processes.
+We're not looking for precise correspondence, just a general agreement in terms of big 
+picture stuff!
 """
 function zilanyetal2014_figure1(resolution=50)
     # Define function to synthesize stimulus at one particular freq / level
@@ -35,7 +41,7 @@ function zilanyetal2014_figure1(resolution=50)
 
     # Define function that implements model 
     @everywhere function resp(stim, cf)
-        return mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014([zeros(500); stim; zeros(500)], cf), cf)[1])
+        return mean(ANF.sim_synapse_zbc2014(ANF.sim_ihc_zbc2014([zeros(500); stim; zeros(500)], cf), cf))
     end
 
     # Define ranges over which we'll iterate
@@ -47,5 +53,5 @@ function zilanyetal2014_figure1(resolution=50)
     avg_rates = reshape(pmap(x -> resp(stim(500.0, x[2]), x[1]), hcat(domain...)), (resolution, resolution))
 
     # Plot
-    heatmap(cfs, levels, transpose(avg_rates), xscale=:log10, color=:jet, clim=(50, 320))
+    heatmap(cfs, levels, transpose(avg_rates), xscale=:log10, color=:jet)
 end
