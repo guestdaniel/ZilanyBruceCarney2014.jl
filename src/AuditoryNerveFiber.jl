@@ -162,11 +162,7 @@ end
 
 
 """
-<<<<<<< HEAD
-    sim_synapse_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, fiber_type="high", frac_noise="approximate")
-=======
     sim_synapse_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, fiber_type="high", frac_noise="approximate", noise_type="ffGn", n_rep=1)
->>>>>>> main
 
 Simulates synapse output for a given inner hair cell input
 
@@ -204,11 +200,7 @@ end
 
 
 """
-<<<<<<< HEAD
-    sim_an_zbc2014(input, cf; fs=10e4, fiber_type="high", frac_noise="approximate")
-=======
     sim_an_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, frac_noise="approximate", noise_type="ffGn", n_rep=1)
->>>>>>> main
 
 Simulates auditory nerve output (spikes or firing rate) for a given inner hair cell input
 
@@ -216,10 +208,7 @@ Simulates auditory nerve output (spikes or firing rate) for a given inner hair c
 - `input::Array{Float64, 1}`: input hair cell potential (from `sim_ihc_zbc2014`)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `fs::Float64`: sampling rate of the *input* in Hz
-<<<<<<< HEAD
-=======
 - `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
->>>>>>> main
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `frac_noise::String`: controls whether we use true or approximate fractional Gaussian noise implementation, one of ("actual", "approximate")
 - `noise_type::String`: whether we use ffGn or simply Gaussian noise, one of ("ffGn", "Gaussian")
@@ -228,7 +217,7 @@ Simulates auditory nerve output (spikes or firing rate) for a given inner hair c
 # Returns
 - `meanrate::Array{Float64, 1}`: analytical estimate of instantaneous firing rate
 - `varrrate::Array{Float64, 1}`: analytical estimate of instantaneous firing rate variance
-- `psth::Array{Float64, 1}`: peri-stimulus time histogram (NOT IMPLEMENTED, SHOULD BE EMPTY)
+- `psth::Array{Float64, 1}`: peri-stimulus time histogram (with bin width = 1/fs)
 """
 function sim_an_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
                         fiber_type::String="high", frac_noise::String="approximate",

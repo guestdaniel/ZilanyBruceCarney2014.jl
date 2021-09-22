@@ -115,8 +115,8 @@ const ASU = AuditorySignalUtils
 using Plots
 
 # Define extension to vector-valued CF parameters
-function ANF.sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Array{Float64, 1}; kwargs...)
-    map(_cf -> ANF.sim_ihc_zbc2014(input, _cf; kwargs...), cf)
+function ANF.sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Array{Float64, 1})
+    map(_cf -> ANF.sim_ihc_zbc2014(input, _cf), cf)
 end
 
 # Define variables
@@ -137,7 +137,7 @@ plot([result[1:1000] for result in results], layout=3, labels="CF = " .* string.
 ## Plotting neurograms
 
 Neurograms are likewise easy to generate, so long as we organize the simulations correctly.
-Here, we define the same method for [`sim_ihc_zbc2014`](@ref)
+Here, we extend [`sim_an_zbc2014`](@ref) in a similar way as above.
 
 ```@example
 using AuditoryNerveFiber
@@ -147,8 +147,8 @@ const ASU = AuditorySignalUtils
 using Plots
 
 # Define extension to vector-valued CF parameters
-function ANF.sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Array{Float64, 1})
-    map(_cf -> ANF.sim_ihc_zbc2014(input, _cf), cf)
+function ANF.sim_an_zbc2014(input::Array{Float64, 1}, cf::Array{Float64, 1})
+    map(_cf -> ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(input, _cf), _cf)[1], cf)
 end
 
 # Define variables
@@ -162,9 +162,44 @@ level = 50.0    # level, dB SPL
 # Define a function to synthesize a pure tone
 pure_tone = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
 # Simulate IHC response at several CFs
-results = ANF.sim_ihc_zbc2014(pure_tone, cfs)
+results = ANF.sim_an_zbc2014(pure_tone, cfs)
 
-
+# Plot
 heatmap(transpose(hcat(results...))[:, 1:3000], xlabel="Samples", ylabel="CF (#)")
 ```
 
+## Simulating hearing loss
+
+We can extend our neurogram simulation to simulate what happens in the case of broad loss of
+outer hair cells by passing a new value to the `cohc` parameter in [`sim_ihc_zbc2014`](@ref).
+
+```@example
+using AuditoryNerveFiber
+const ANF = AuditoryNerveFiber
+using AuditorySignalUtils
+const ASU = AuditorySignalUtils
+using Plots
+
+# Define extension to vector-valued CF parameters
+function ANF.sim_an_zbc2014(input::Array{Float64, 1}, cf::Array{Float64, 1}; cohc=1.0)
+    map(_cf -> ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(input, _cf; cohc=cohc), _cf)[1], cf)
+end
+
+# Define variables
+freq = 1000.0   # freq, Hz
+cfs = collect(ASU.LogRange(200.0, 20000.0, 100))  # CFs, Hz
+phase = 0.0     # starting phase, rads
+dur = 0.2       # duration, seconds
+fs = 10e4       # sampling rate, Hz
+level = 50.0    # level, dB SPL
+
+# Define a function to synthesize a pure tone
+pure_tone = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
+# Simulate IHC response at several CFs
+results = ANF.sim_an_zbc2014(pure_tone, cfs; cohc=0.25)
+
+# Plot
+heatmap(transpose(hcat(results...))[:, 1:3000], xlabel="Samples", ylabel="CF (#)")
+```
+
+As can be seen, with 75% OHC loss the response is less sharply tuned. 
