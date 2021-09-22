@@ -33,8 +33,8 @@ function zilanyetal2014_figure1(resolution=50)
 
     # Define function that implements model 
     @everywhere function simulate_an_response(stim, cf)
-        x = mean(ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014([zeros(500); stim; zeros(500)], cf), cf)[1])
-        x = x ./ (1 .+ 0.75e-3 * x)  # transform synapse out into firing rate
+        x = mean(ANF.sim_synapse_zbc2014(ANF.sim_ihc_zbc2014([zeros(500); stim; zeros(500)], cf), cf))
+        #x = x ./ (1 .+ 0.75e-3 * x)  # transform synapse out into firing rate
         return x
     end
 
@@ -47,7 +47,10 @@ function zilanyetal2014_figure1(resolution=50)
     avg_rates = reshape(pmap(x -> simulate_an_response(synthesize_pure_tone(500.0, x[2]), x[1]), hcat(domain...)), (resolution, resolution))
 
     # Plot
-    heatmap(cfs, levels, transpose(avg_rates), xscale=:log10, color=:jet, clim=(50, 320))
+    #heatmap(cfs, levels, transpose(avg_rates), xscale=:log10, color=:jet, clim=(50, 320))
+    heatmap(cfs, levels, transpose(avg_rates), xscale=:log10, color=:jet)
+    xlabel!("CF (Hz)")
+    ylabel!("Level (dB SPL)")
 
     # Save figure
     savefig("test/outputs/zilanyetal2014_figure1.png")
@@ -97,3 +100,6 @@ function zilanyetal2009_figure4(n_rep=20)
     # Save figure
     savefig("test/outputs/zilanyetal2009_figure4.png")
 end
+
+zilanyetal2009_figure4(20)
+zilanyetal2014_figure1(40)
