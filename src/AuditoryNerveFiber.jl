@@ -11,24 +11,88 @@ using libzbc2014_jll
 """
     random_numbers(length)
 
-Generates random numbers like MATLAB's rand or Python's numpy.random.rand
+Generates random numbers like MATLAB's rand or Python's numpy.random.rand. Note that this
+function returns a pointer instead of a Julia array as we expect that it will be called from
+C and not Julia.
 """
 function random_numbers(n::Int32)
     return pointer(rand(Float64, n))
 end
 
 
-"""
-    ffGn(N, tdres, Hinput, noiseType, mu, sigma)
+""" 
+    ffGn(N)
 
-Synthesizes a sample of fractional Gaussian noise of length N. Presently it 
-just returns zeros, but functionality will be added soon.
+Synthesize a sample of fractional Gaussian noise.
 
-# Warnings
-- Note that this function currently just returns zeros, where it should return fractional Gaussian noise
+This is a direct translation of Python code written by Marek Rudnicki in the cochlea package
+(https://github.com/mrkrd/cochlea). Note that this function returns a pointer instead of 
+a Julia array as it is expected to be called from within C.
 """
-function ffGn(N::Int32)
-    return zeros((N, ))
+function ffGn(N::Int32, tdres::Float64, Hinput::Float64, noiseType::Float64, mu::Float64; safety::Int64=4)
+    # Start by handling noiseType
+    if noiseType == 0.0
+        return pointer(zeros(N))
+    end
+
+    # If noiseType != 0, we're synthesizing fractional Gaussian noise
+    # First, we downsample the number of points 
+    resamp = Int(ceil(1e-1 / tdres))
+    nop = N
+    N = Int(ceil(N / resamp) + 1)
+    if N < 10
+        N = 10
+    end
+
+    # Next, determine if fGn or fBm should be produced
+    if Hinput < 1.0
+        H = Hinput
+        fBn = false
+    else
+        H = Hinput - 1
+        fBn = true
+    end
+
+    # Calculate fGn
+    if H == 0.5
+        y = randn(N)
+    else
+        Nfft = Int(2 ^ ceil(log2(2*(N-1))))
+        NfftHalf = Int(round(Nfft / 2))
+
+        k = [0:(NfftHalf-1); NfftHalf:-1:1]
+        Zmag = 0.5 * ( (k.+1) .^ (2*H) -2*k .^ (2*H) + abs.(k .- 1) .^ (2*H))
+
+        Zmag = real.(fft(Zmag))
+        Zmag = sqrt.(Zmag)
+
+        Z = Zmag .* (randn(Nfft) + randn(Nfft) .* 1im)
+
+        y = real.(ifft(Z)) * sqrt(Nfft)
+
+        y = y[1:(N+safety)]
+    end
+
+    # Convert fGn to fBn if needed
+    if fBn == 1.0
+        y = cumsum(y)
+    end
+
+    # Resample to match AN model
+    y = upsample(y, resamp)
+
+    # Handle mu and sigma
+    if mu < 0.5
+        sigma = 3.0
+    elseif mu < 18.0
+        sigma = 30.0
+    else
+        sigma = 200.0
+    end
+    y = sigma .* y 
+
+    # Return 
+    return pointer(y[1:nop])
 end
 
 
@@ -45,6 +109,24 @@ function decimate(original_signal::Ptr{Cdouble}, k::Int32, resamp::Int32)
     temp_orig = unsafe_wrap(Array, original_signal, k)
     _resampled = resample(temp_orig, 1/resamp)
     return pointer(_resampled)
+end
+
+
+
+"""
+    upsample(original_signal, resamp)
+
+Upsamples a 1D signal by a factor of resamp. 
+
+# Warnings
+- This function is (very marginally) affected by a known issue with DSP.resample. The function uses DSP.resample and pads a few zeros to compensate for the few samples gobbled by the upsampling filter (see issue at https://github.com/JuliaDSP/DSP.jl/issues/104).
+"""
+function upsample(original_signal::Array{Float64, 1}, resamp::Int64)
+    # Directly upsample using DSP.resample
+    upsampled_signal = DSP.resample(original_signal, resamp)
+    upsampled_signal = [upsampled_signal; zeros(length(original_signal)*resamp - length(upsampled_signal))]
+    # Return
+    return upsampled_signal
 end
 
 
@@ -65,13 +147,14 @@ Simulates inner hair cell potential for given acoustic input.
 - `output::Array{Float64, 1}`: inner hair cell potential output
 """
 function sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
-                         cohc::Float64=1.0, cihc::Float64=1.0, species::String="cat")
+                         cohc::Float64=1.0, cihc::Float64=1.0, species::String="cat",
+                         n_rep::Int64=1)
     # Map species string to species integer expected by IHCAN!
     species_flag = Dict([("cat", 1), ("human", 2), ("human_glasberg", 3)])[species]
     # Create empty array for output
-    output = zeros((length(input), ))
+    output = zeros((length(input)*n_rep, ))
     # Make call
-    IHCAN!(input, cf, Int32(1), 1/fs, Int32(length(input)), cohc, cihc, Int32(species_flag), 
+    IHCAN!(input, cf, Int32(n_rep), 1/fs, Int32(length(input)), cohc, cihc, Int32(species_flag), 
            output);
     # Return
     return output
@@ -79,7 +162,11 @@ end
 
 
 """
+<<<<<<< HEAD
     sim_synapse_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, fiber_type="high", frac_noise="approximate")
+=======
+    sim_synapse_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, fiber_type="high", frac_noise="approximate", noise_type="ffGn", n_rep=1)
+>>>>>>> main
 
 Simulates synapse output for a given inner hair cell input
 
@@ -90,21 +177,26 @@ Simulates synapse output for a given inner hair cell input
 - `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `frac_noise::String`: controls whether we use true or approximate fractional Gaussian noise implementation, one of ("actual", "approximate")
+- `noise_type::String`: whether we use ffGn or simply Gaussian noise, one of ("ffGn", "Gaussian")
+- `n_rep::Int64`: number of repetititons to run (note that this does not appear to work correctly for the time being)
 
 # Returns
 - `output::Array{Float64, 1}`: synapse output (unknown units?)
 """
 function sim_synapse_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
                              fs_synapse::Float64=10e3, fiber_type::String="high", 
-                             frac_noise::String="approximate")
+                             frac_noise::String="approximate", noise_type::String="ffGn",
+                             n_rep::Int64=1)
     # Map fiber type string to float code expected by Synapse!
     spont = Dict([("low", 0.1), ("medium", 4.0), ("high", 100.0)])[fiber_type]
     # Map fractional noise implementation type to float code expected by Syanpse!
     implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[frac_noise]
+    # Map noise type to float code expected by Syanpse!
+    noiseType = Dict([("ffGn", 1.0), ("Gaussian", 0.0)])[noise_type]
     # Create empty array for output
     output = zeros((length(input), ))
     # Make call
-    Synapse!(input, 1.0/fs, cf, Int32(length(input)), Int32(1), spont, 1.0, implnt, 
+    Synapse!(input, 1.0/fs, cf, Int32(length(input)), Int32(n_rep), spont, noiseType, implnt, 
              fs_synapse, output)
     # Return
     return output
@@ -112,7 +204,11 @@ end
 
 
 """
+<<<<<<< HEAD
     sim_an_zbc2014(input, cf; fs=10e4, fiber_type="high", frac_noise="approximate")
+=======
+    sim_an_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, frac_noise="approximate", noise_type="ffGn", n_rep=1)
+>>>>>>> main
 
 Simulates auditory nerve output (spikes or firing rate) for a given inner hair cell input
 
@@ -120,8 +216,14 @@ Simulates auditory nerve output (spikes or firing rate) for a given inner hair c
 - `input::Array{Float64, 1}`: input hair cell potential (from `sim_ihc_zbc2014`)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `fs::Float64`: sampling rate of the *input* in Hz
+<<<<<<< HEAD
+=======
+- `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
+>>>>>>> main
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `frac_noise::String`: controls whether we use true or approximate fractional Gaussian noise implementation, one of ("actual", "approximate")
+- `noise_type::String`: whether we use ffGn or simply Gaussian noise, one of ("ffGn", "Gaussian")
+- `n_rep::Int64`: number of repetititons to run (note that this does not appear to work correctly for the time being)
 
 # Returns
 - `meanrate::Array{Float64, 1}`: analytical estimate of instantaneous firing rate
@@ -129,17 +231,21 @@ Simulates auditory nerve output (spikes or firing rate) for a given inner hair c
 - `psth::Array{Float64, 1}`: peri-stimulus time histogram (NOT IMPLEMENTED, SHOULD BE EMPTY)
 """
 function sim_an_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
-                        fiber_type::String="high", frac_noise::String="approximate")
+                        fiber_type::String="high", frac_noise::String="approximate",
+                        noise_type::String="ffGn", n_rep::Int64=1)
+
     # Map fiber type string to float code expected by Synapse!
     fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
     # Map fractional noise implementation type to float code expected by Syanpse!
     implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[frac_noise]
+    # Map noise type to float code expected by Syanpse!
+    noiseType = Dict([("ffGn", 1.0), ("Gaussian", 0.0)])[noise_type]
     # Create empty array for output
     meanrate = zeros((length(input), ))
     varrate = zeros((length(input), ))
     psth = zeros((length(input), ))
     # Make call
-    SingleAN!(input, cf, Int32(1), 1.0/fs, Int32(length(input)), fibertype, 1.0, implnt, 
+    SingleAN!(input, cf, Int32(n_rep), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, 
               meanrate, varrate, psth)
     # Return
     return (meanrate, varrate, psth)
@@ -195,8 +301,8 @@ Julia, there are no sanity checks on any arguments.
 - `totalstim::Int32`: number of samples in simulation
 - `nrep::Int32`: number of repetitions to simulate.
 - `spont::Float64`: spontaneous rate, either (0.1 == low spont fiber, 4.0 == medium spont fiber, 100.0 == high spont fiber)
-- `noiseType::Float64`: NOT CURRENTLY IMPLEMENTED
-- `implnt::Float64`: whether or not to use exact implementation of fractional Gaussian noise, either (1.0 == use, 0.0 == approximate)
+- `noiseType::Float64`: whether we use ffGn or Gaussian noise (1.0 == ffGn, 0.0 == Gaussian)
+- `implnt::Float64`: whether or not to use exact implementation of fractional Gaussian noise, either (1.0 == actual, 0.0 == approximate)
 - `sampFreq::Float64`: sampling frequency of the power law stage in Hz. Simulations are decimated to sampFreq from 1/tdres before the power law stage and then upsampled back to the original sampling rate. The product of tdres and sampFreq, which indicates the amount to decimate by, must be an integer
 - `synouttmp::Array{Float64, 1}`: array of same size as `ihcout`, used to store output from C
 """
@@ -217,8 +323,8 @@ function Synapse!(ihcout::Array{Float64, 1}, tdres::Float64, cf::Float64,
            Ptr{Cdouble}, # synouttmp
            Ptr{nothing}, # ffGn
            Ptr{nothing}),# decimate
-          ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq,
-          synouttmp, @cfunction(ffGn, Vector{Cdouble}, (Cint, )), 
+          ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp, 
+          @cfunction(ffGn, Ptr{Cdouble}, (Cint, Cdouble, Cdouble, Cdouble, Cdouble)), 
           @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)))
 end
 
@@ -241,7 +347,7 @@ Julia, there are no sanity checks on any arguments.
 - `tdres::Float64`: time-domain resolution (i.e., reciprocal of sampling rate)
 - `totalstim::Int32`: number of samples in simulation
 - `fibertype::Float64`: fiber type, either (1.0 == low, 2.0 == med, 3.0 == high)
-- `noiseType::Float64`: NOT CURRENTLY IMPLEMENTED
+- `noiseType::Float64`: whether we use ffGn or Gaussian noise (1.0 == ffGn, 0.0 == Gaussian)
 - `implnt::Float64`: whether or not to use exact implementation of fractional Gaussian noise, either (1.0 == use, 0.0 == approximate)
 - `meanrate::Array{Float64, 1}`: array of same size as `ihcout`, used to store analytical firing rate output
 - `varrate::Array{Float64, 1}`: array of same size as `ihcout`, used to store analytical firing rate variance output
@@ -268,7 +374,8 @@ function SingleAN!(ihcout::Array{Float64, 1}, cf::Float64, nrep::Int32,
            Ptr{nothing},  # decimate
            Ptr{nothing}), # random_numbers
           ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt,
-          meanrate, varrate, psth, @cfunction(ffGn, Vector{Cdouble}, (Cint, )), 
+          meanrate, varrate, psth, 
+          @cfunction(ffGn, Ptr{Cdouble}, (Cint, Cdouble, Cdouble, Cdouble, Cdouble)), 
           @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)),
           @cfunction(random_numbers, Ptr{Cdouble}, (Cint, )))
 end

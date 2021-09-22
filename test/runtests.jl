@@ -17,12 +17,35 @@ fs = 100_000.0
 dur = 0.1
 freq = 1000.0
 pt = ASU.scale_dbspl(ASU.pure_tone(freq, 0.0, dur, fs), 50.0)
-tol = 1e-2
+tol = 1e-2  # general tolerance on comparisons of approximate equality (should upgrade to isapprox)
 
 # Test ffGn
-#@test begin
-#    sample = ANF.ffGn(Int32(10000), 1/fs, 0.75, 1.0, 1.0)
-#end
+@testset "Fractional Gaussian noise" begin
+    # Test that we can call the function
+    @test begin
+        sample = ANF.ffGn(Int32(10000), 1/fs, 0.75, 1.0, 1.0)
+        true
+    end
+    # Test that the noiseType switch behaves as expect
+    #@test begin
+    #    sample = ANF.ffGn(Int32(10000), 1/fs, 0.75, 0.0, 1.0)
+    #    sample = unsafe_wrap(Array, sample, 10000)
+    #    all(abs.(sample) .< tol)
+    #end
+    # Test that raising the mean to the branch points in the code (0.5, 18.0 results in 
+    # corresponding changes in sigma
+    @test begin
+        myfunc(mu) = std(unsafe_wrap(Array, ANF.ffGn(Int32(100000), 1/fs, 0.75, 1.0, mu), 100000))
+        vars = map(myfunc, [0.4, 10.0, 20.0])
+        vars[1] < vars[2] < vars[3]
+    end
+end
+
+# Test upsampling function
+@test begin
+    pt_upsampled = ANF.upsample(pt, 5)
+    maximum(abs.(pt_upsampled[1:5:length(pt_upsampled)] - pt)) < tol
+end
 
 # Start by testing the direct bindings and just make sure that they run!
 @testset "C bindings: check callable" begin
@@ -111,6 +134,14 @@ end
 
 # Next we check that the outputs are sensible
 @testset "Wrappers: outputs" begin
+    # Check that calling with n_rep > 1 produces expected results (cloning and tiling of response along primary axis)
+    # Note that we need to zero-pad the inputs, otherwise responses will trail over?
+    @test begin
+        output_single = ANF.sim_ihc_zbc2014([zeros(2000); pt; zeros(2000)], freq)
+        output_multiple = ANF.sim_ihc_zbc2014([zeros(2000); pt; zeros(2000)], freq; n_rep=2)
+        first_repeat = all(abs.(output_single - output_multiple[1:14000]) .< tol)
+        second_repeat = all(abs.(output_single - output_multiple[(1:14000).+14000]) .< tol)
+    end
     # Check that inner hair cell response shows expected hallmarks (response to sinusoid at CF, partial rectification)
     @test begin
         output = ANF.sim_ihc_zbc2014(pt, freq)
