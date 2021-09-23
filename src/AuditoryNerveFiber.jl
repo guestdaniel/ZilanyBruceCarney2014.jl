@@ -136,7 +136,7 @@ end
 Simulates inner hair cell potential for given acoustic input.
 
 # Arguments
-- `input::Array{Float64, 1}`: sound pressure waveform in pascals
+- `input::AbstractVector{Float64}`: sound pressure waveform in pascals
 - `cf::Float64`: characteristic frequency of the IHC in Hz
 - `fs::Float64`: sampling rate in Hz
 - `cohc::Float64`: outer hair cell survival (from 0 to 1)
@@ -146,7 +146,7 @@ Simulates inner hair cell potential for given acoustic input.
 # Returns
 - `output::Array{Float64, 1}`: inner hair cell potential output
 """
-function sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
+function sim_ihc_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Float64=10e4,
                          cohc::Float64=1.0, cihc::Float64=1.0, species::String="cat",
                          n_rep::Int64=1)
     # Map species string to species integer expected by IHCAN!
@@ -161,13 +161,23 @@ function sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4
 end
 
 
+function sim_ihc_zbc2014(input::AbstractArray{Float64, N}, cf::Float64; kwargs...) where {N}
+    mapslices(signal -> sim_ihc_zbc2014(signal, cf; kwargs...), input; dims=N)
+end
+
+
+function sim_ihc_zbc2014(input::AbstractArray{T, N}, cf::Float64; kwargs...) where {N, T<:AbstractArray}
+    map(signal -> sim_ihc_zbc2014(signal, cf), input; kwargs...)
+end
+
+
 """
     sim_synapse_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, fiber_type="high", frac_noise="approximate", noise_type="ffGn", n_rep=1)
 
 Simulates synapse output for a given inner hair cell input
 
 # Arguments
-- `input::Array{Float64, 1}`: input hair cell potential (from sim_ihc_zbc2014)
+- `input::AbstractVector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `fs::Float64`: sampling rate of the *input* in Hz
 - `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
@@ -179,7 +189,7 @@ Simulates synapse output for a given inner hair cell input
 # Returns
 - `output::Array{Float64, 1}`: synapse output (unknown units?)
 """
-function sim_synapse_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
+function sim_synapse_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Float64=10e4,
                              fs_synapse::Float64=10e3, fiber_type::String="high", 
                              power_law::String="approximate", fractional::Bool=false,
                              n_rep::Int64=1)
@@ -199,13 +209,23 @@ function sim_synapse_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=
 end
 
 
+function sim_synapse_zbc2014(input::AbstractArray{Float64, N}, cf::Float64; kwargs...) where {N}
+    mapslices(signal -> sim_synapse_zbc2014(signal, cf; kwargs...), input; dims=N)
+end
+
+
+function sim_synapse_zbc2014(input::AbstractArray{T, N}, cf::Float64; kwargs...) where {N, T<:AbstractArray}
+    map(signal -> sim_synapse_zbc2014(signal, cf), input; kwargs...)
+end
+
+
 """
     sim_an_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, frac_noise="approximate", noise_type="ffGn", n_rep=1)
 
 Simulates auditory nerve output (spikes or firing rate) for a given inner hair cell input
 
 # Arguments
-- `input::Array{Float64, 1}`: input hair cell potential (from sim_ihc_zbc2014)
+- `input::AbstractVector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `fs::Float64`: sampling rate of the *input* in Hz
 - `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
@@ -219,7 +239,7 @@ Simulates auditory nerve output (spikes or firing rate) for a given inner hair c
 - `varrrate::Array{Float64, 1}`: analytical estimate of instantaneous firing rate variance
 - `psth::Array{Float64, 1}`: peri-stimulus time histogram (NOT IMPLEMENTED, SHOULD BE EMPTY)
 """
-function sim_an_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
+function sim_an_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Float64=10e4,
                         fiber_type::String="high", power_law::String="approximate",
                         fractional::Bool=false, n_rep::Int64=1)
 
@@ -240,6 +260,15 @@ function sim_an_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
     return (meanrate, varrate, psth)
 end
 
+
+function sim_an_zbc2014(input::AbstractArray{Float64, N}, cf::Float64; kwargs...) where {N}
+    mapslices(signal -> sim_an_zbc2014(signal, cf; kwargs...), input; dims=N)
+end
+
+
+function sim_an_zbc2014(input::AbstractArray{T, N}, cf::Float64; kwargs...) where {N, T<:AbstractArray}
+    map(signal -> sim_an_zbc2014(signal, cf), input; kwargs...)
+end
 
 
 """
