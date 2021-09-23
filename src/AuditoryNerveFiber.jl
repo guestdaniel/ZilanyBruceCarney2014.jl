@@ -141,7 +141,7 @@ Simulates inner hair cell potential for given acoustic input.
 - `fs::Float64`: sampling rate in Hz
 - `cohc::Float64`: outer hair cell survival (from 0 to 1)
 - `cihc::Float64`: inner hair cell survival (from 0 to 1)
-- `species::Int32`: species, either (1 = cat, 2 = humans with Shera tuning, 3 = humans with Glasberg tuning)
+- `species::Int32`: species, either ("cat" = cat, "human" = humans with Shera tuning, "human_glasberg" = humans with Glasberg tuning)
 
 # Returns
 - `output::Array{Float64, 1}`: inner hair cell potential output
@@ -172,8 +172,8 @@ Simulates synapse output for a given inner hair cell input
 - `fs::Float64`: sampling rate of the *input* in Hz
 - `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
-- `frac_noise::String`: controls whether we use true or approximate fractional Gaussian noise implementation, one of ("actual", "approximate")
-- `noise_type::String`: whether we use ffGn or simply Gaussian noise, one of ("ffGn", "Gaussian")
+- `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
+- `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
 - `n_rep::Int64`: number of repetititons to run (note that this does not appear to work correctly for the time being)
 
 # Returns
@@ -181,14 +181,14 @@ Simulates synapse output for a given inner hair cell input
 """
 function sim_synapse_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
                              fs_synapse::Float64=10e3, fiber_type::String="high", 
-                             frac_noise::String="approximate", noise_type::String="ffGn",
+                             power_law::String="approximate", fractional::Bool=false,
                              n_rep::Int64=1)
     # Map fiber type string to float code expected by Synapse!
     spont = Dict([("low", 0.1), ("medium", 4.0), ("high", 100.0)])[fiber_type]
-    # Map fractional noise implementation type to float code expected by Syanpse!
-    implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[frac_noise]
-    # Map noise type to float code expected by Syanpse!
-    noiseType = Dict([("ffGn", 1.0), ("Gaussian", 0.0)])[noise_type]
+    # Map power-law implementation type to float code expected by Syanpse!
+    implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[power_law]
+    # Map fractional to float code expected by Syanpse!
+    noiseType = Dict([(true, 1.0), (false, 0.0)])[fractional]
     # Create empty array for output
     output = zeros((length(input), ))
     # Make call
@@ -210,8 +210,8 @@ Simulates auditory nerve output (spikes or firing rate) for a given inner hair c
 - `fs::Float64`: sampling rate of the *input* in Hz
 - `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
-- `frac_noise::String`: controls whether we use true or approximate fractional Gaussian noise implementation, one of ("actual", "approximate")
-- `noise_type::String`: whether we use ffGn or simply Gaussian noise, one of ("ffGn", "Gaussian")
+- `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
+- `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
 - `n_rep::Int64`: number of repetititons to run (note that this does not appear to work correctly for the time being)
 
 # Returns
@@ -220,15 +220,15 @@ Simulates auditory nerve output (spikes or firing rate) for a given inner hair c
 - `psth::Array{Float64, 1}`: peri-stimulus time histogram (NOT IMPLEMENTED, SHOULD BE EMPTY)
 """
 function sim_an_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
-                        fiber_type::String="high", frac_noise::String="approximate",
-                        noise_type::String="ffGn", n_rep::Int64=1)
+                        fiber_type::String="high", power_law::String="approximate",
+                        fractional::Bool=false, n_rep::Int64=1)
 
     # Map fiber type string to float code expected by Synapse!
     fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
-    # Map fractional noise implementation type to float code expected by Syanpse!
-    implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[frac_noise]
-    # Map noise type to float code expected by Syanpse!
-    noiseType = Dict([("ffGn", 1.0), ("Gaussian", 0.0)])[noise_type]
+    # Map power-law implementation type to float code expected by Syanpse!
+    implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[power_law]
+    # Map fractional to float code expected by Syanpse!
+    noiseType = Dict([(true, 1.0), (false, 0.0)])[fractional]
     # Create empty array for output
     meanrate = zeros((length(input), ))
     varrate = zeros((length(input), ))
@@ -290,8 +290,8 @@ Julia, there are no sanity checks on any arguments.
 - `totalstim::Int32`: number of samples in simulation
 - `nrep::Int32`: number of repetitions to simulate.
 - `spont::Float64`: spontaneous rate, either (0.1 == low spont fiber, 4.0 == medium spont fiber, 100.0 == high spont fiber)
-- `noiseType::Float64`: whether we use ffGn or Gaussian noise (1.0 == ffGn, 0.0 == Gaussian)
-- `implnt::Float64`: whether or not to use exact implementation of fractional Gaussian noise, either (1.0 == actual, 0.0 == approximate)
+- `noiseType::Float64`: whether we use ffGn or not (1.0 == ffGn, 0.0 == not)
+- `implnt::Float64`: whether or not to use exact implementation of power-law adaptation, either (1.0 == actual, 0.0 == approximate)
 - `sampFreq::Float64`: sampling frequency of the power law stage in Hz. Simulations are decimated to sampFreq from 1/tdres before the power law stage and then upsampled back to the original sampling rate. The product of tdres and sampFreq, which indicates the amount to decimate by, must be an integer
 - `synouttmp::Array{Float64, 1}`: array of same size as `ihcout`, used to store output from C
 """
@@ -336,8 +336,8 @@ Julia, there are no sanity checks on any arguments.
 - `tdres::Float64`: time-domain resolution (i.e., reciprocal of sampling rate)
 - `totalstim::Int32`: number of samples in simulation
 - `fibertype::Float64`: fiber type, either (1.0 == low, 2.0 == med, 3.0 == high)
-- `noiseType::Float64`: whether we use ffGn or Gaussian noise (1.0 == ffGn, 0.0 == Gaussian)
-- `implnt::Float64`: whether or not to use exact implementation of fractional Gaussian noise, either (1.0 == use, 0.0 == approximate)
+- `noiseType::Float64`: whether we use ffGn or not (1.0 == ffGn, 0.0 == not)
+- `implnt::Float64`: whether or not to use exact implementation of power-law adaptation, either (1.0 == actual, 0.0 == approximate)
 - `meanrate::Array{Float64, 1}`: array of same size as `ihcout`, used to store analytical firing rate output
 - `varrate::Array{Float64, 1}`: array of same size as `ihcout`, used to store analytical firing rate variance output
 - `psth::Array{Float64, 1}`: array of same size as `ihcout`, used to store empirical PSTH output

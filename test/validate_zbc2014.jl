@@ -79,12 +79,12 @@ function zilanyetal2009_figure4(n_rep=20)
         # Synthesize stimulus 
         stim = synthesize_pure_tone(dur)
         # Run simulation
-        x = ANF.sim_synapse_zbc2014(ANF.sim_ihc_zbc2014(stim, 10_000.0; n_rep=n_rep), 10_000.0; frac_noise="actual")
+        x = ANF.sim_synapse_zbc2014(ANF.sim_ihc_zbc2014(stim, 10_000.0; n_rep=n_rep), 10_000.0; power_law="actual")
         x = x ./ (1 .+ 0.75e-3 * x)  # transform synapse into firing rate
         x = reshape(x, (Int(500 + dur*100e3 + 20e3), n_rep))
         # Average over resp
         x = mean(x; dims=2)
-        # Return zero-padded to 1.2 seconds
+        # Return zero-padded to 1.5 seconds
         return [x; zeros(Int(1.5*100e3 - length(x)))]
     end
     # Run simulation for many levels
