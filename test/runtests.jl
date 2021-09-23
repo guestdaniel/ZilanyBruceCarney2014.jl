@@ -194,3 +194,44 @@ end
         abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
     end
 end
+
+# Next we check that fancy iteration features work correctly
+# We have two "types" of fancy iteration to test
+# - Iteration of final dimension of array 
+# - Iteration over each element of array, if type of array elements is AbstractArray{Float64, 1}
+@testset "Wrappers: iteration  $model_stage" for model_stage in [ANF.sim_ihc_zbc2014, ANF.sim_synapse_zbc2014] 
+    # Version 1
+    # Check that if we simulate a pure-tone response from a 1d input, or the same pure-tone
+    # response twice from a 2d input, that we get the same result out
+    @test begin
+        output_1d = model_stage(pt, freq)
+        output_2d = model_stage(transpose([pt pt]), 1000.0)
+        all(output_1d .== output_2d[1, :] .== output_2d[2, :])
+    end
+    # Try a 4D array and verify that output is correct shape
+    @test begin
+        x = randn(3, 3, 3, 5000)
+        output = model_stage(x, 1000.0)
+        size(x) == (3, 3, 3, 5000)
+    end
+    # Version 2
+    # Check that if we simulate a pure-tone response from a 1d input, or the same pure-tone
+    # response twice from a 2d input, that we get the same result out
+    @test begin
+        output_1d = model_stage(pt, freq)
+        x = Vector{Vector{Float64}}(undef, (2, ))
+        x[1] = pt
+        x[2] = pt
+        output_2d = model_stage(x, 1000.0)
+        all(output_1d .== output_2d[1] .== output_2d[2])
+    end
+    # Try a 4D array and verify that output is correct shape
+    @test begin
+        x = Array{Vector{Float64}, 3}(undef, (3, 3, 3))
+        for i in eachindex(x)
+            x[i] = randn(5000)
+        end
+        output = model_stage(x, 1000.0)
+        size(x) == (3, 3, 3) && typeof(x[1, 1, 1]) == Vector{Float64}
+    end
+end
