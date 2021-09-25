@@ -3,8 +3,8 @@ module AuditoryNerveFiber
 # Handle imports
 using DSP
 using FFTW
-using AuditorySignalUtils
-const ASU = AuditorySignalUtils
+import AuditorySignalUtils as ASU
+using AuditoryFilters
 using libzbc2014_jll
 
 
@@ -238,6 +238,55 @@ function sim_an_zbc2014(input::Array{Float64, 1}, cf::Float64; fs::Float64=10e4,
               meanrate, varrate, psth)
     # Return
     return (meanrate, varrate, psth)
+end
+
+
+function sim_an_hcc2001(input::AbstractArray{Float64, 1}, cf::Float64; fs::Float64=10e4)
+    # Calculate gammatone filterbank response
+    filterbank = make_erb_filterbank(fs, 1, cf)
+    bm = filt(filterbank, input)
+    
+    # Apply saturating nonlinearity
+    K = 1225
+    beta = -1
+    ihc = @. (atan(K * bm + beta) - atan(beta)) / (pi / 2 - atan(beta))
+
+    # Apply lowpass filter
+    filter = digitalfilter(Lowpass(4800; fs=fs), Butterworth(1))
+    for i in 1:7
+        ihc = filt(filter, ihc)
+    end
+
+    # Apply auditory nerve stage
+    dims = size(ihc)
+    C_I = zero(ihc)
+    C_L = zero(ihc)
+
+    T_s = 1 / fs     # sampling period
+    r_o = 50         # spontaneous discharge rate
+    V_I = 0.0005     # immediate "volume"
+    V_L = 0.005      # local "volume"
+    P_G = 0.03       # global permeability ("volume"/s)
+    P_L = 0.06       # local permeability ("volume"/s)
+    PI_rest = 0.012  # resting immediate permeability ("volume"/s)
+    PI_max = 0.6     # maximum immediate permeability ("volume"/s")... not sure why this is unused in paper eq.
+    C_G = 6666.7     # global concentration ("spikes/volume")
+    P_I = @. 0.0173 * log(1 + exp(34.657 * ihc))  # immediate permeability ("volume"/s)
+    C_I[1, :] .= r_o / PI_rest
+    C_L[1, :] .= C_I[1, :] * (PI_rest + P_L) / P_L
+
+    # Implement dynamics
+    for ii in 1:(dims[1]-1)
+        for kk in 1:dims[2]
+            C_I[ii+1, kk] = C_I[ii, kk] + (T_s / V_I) * (
+                    -P_I[ii, kk] * C_I[ii, kk] + P_L * (C_L[ii, kk] - C_I[ii, kk]))
+            C_L[ii+1, kk] = C_L[ii, kk] + (T_s / V_L) * (
+                    -P_L * (C_L[ii, kk] - C_I[ii, kk]) + P_G * (C_G - C_L[ii, kk]))
+        end
+    end
+
+    # Return
+    return P_I .* C_I
 end
 
 
