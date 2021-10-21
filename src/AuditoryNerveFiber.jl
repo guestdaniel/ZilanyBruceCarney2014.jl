@@ -270,6 +270,20 @@ function sim_an_zbc2014(input::AbstractArray{T, N}, cf::Float64; kwargs...) wher
     map(signal -> sim_an_zbc2014(signal, cf), input; kwargs...)
 end
 
+
+"""
+    sim_an_zbc2001(input, cf; fs=100e3)
+
+Simulates auditory nerve output (instantaneous firing rate) for a given acoustic input.
+
+# Arguments
+- `input::AbstractVector{Float64}`: acoustic stimulus (Pa)
+- `cf::Float64`: characteristic frequency of the fiber (Hz)
+- `fs::Float64`: sampling rate of the input (Hz)
+
+# Returns
+- `::Array{Float64, 1}`: Instantaneous firing rate (spikes/s)
+"""
 function sim_an_hcc2001(input::AbstractArray{Float64, 1}, cf::Float64; fs::Float64=10e4)
     # Calculate gammatone filterbank response
     filterbank = make_erb_filterbank(fs, 1, cf)
@@ -316,6 +330,16 @@ function sim_an_hcc2001(input::AbstractArray{Float64, 1}, cf::Float64; fs::Float
 
     # Return
     return P_I .* C_I
+end
+
+
+function sim_an_hcc2001(input::AbstractArray{Float64, N}, cf::Float64; kwargs...) where {N}
+    mapslices(signal -> sim_an_hcc2001(signal, cf; kwargs...), input; dims=N)
+end
+
+
+function sim_an_hcc2001(input::AbstractArray{T, N}, cf::Float64; kwargs...) where {N, T<:AbstractArray}
+    map(signal -> sim_an_hcc2001(signal, cf), input; kwargs...)
 end
 
 
