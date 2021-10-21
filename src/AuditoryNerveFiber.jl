@@ -7,6 +7,9 @@ import AuditorySignalUtils as ASU
 using AuditoryFilters
 using libzbc2014_jll
 
+# Handle exports
+export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_an_hcc2001
+
 
 """
     random_numbers(length)
