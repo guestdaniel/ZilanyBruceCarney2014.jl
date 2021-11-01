@@ -3,12 +3,11 @@ module AuditoryNerveFiber
 # Handle imports
 using DSP
 using FFTW
-import AuditorySignalUtils as ASU
 using AuditoryFilters
 using libzbc2014_jll
 
 # Handle exports
-export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_an_hcc2001
+export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014, sim_an_hcc2001
 
 
 """
@@ -134,6 +133,47 @@ end
 
 
 """
+    dispatch_vectorized_input(func)
+
+Macro that defines a method for model functions dispatched over a vector of inputs 
+
+# Arguments
+- `func`: A function implementing an "input" the first position arg, and "cf" as the second, otherwise accepting kwargs
+"""
+
+macro dispatch_vectorized_input(func)
+    :( $func(input::AbstractVector{<:AbstractVector{Float64}}, cf::Float64; kwargs...) = map(signal -> $func(signal, cf; kwargs...), input) )
+end
+
+"""
+    dispatch_vectorized_cfs(func)
+
+Macro that defines a method for model functions dispatched over a vector of cfs
+
+# Arguments
+- `func`: A function implementing an "input" the first position arg, and "cf" as the second, otherwise accepting kwargs
+"""
+
+macro dispatch_vectorized_cfs(func)
+    :( $func(input::AbstractVector{Float64}, cf::AbstractVector{Float64}; kwargs...) = transpose(hcat(map(x -> $func(input, x; kwargs...), cf)...)) )
+end
+
+"""
+    dispatch_vectorized_input_and_cfs(func)
+
+Macro that defines a method for model functions dispatched over a vector of inputs and a vector of cfs
+
+# Arguments
+- `func`: A function implementing an "input" the first position arg, and "cf" as the second, otherwise accepting kwargs
+"""
+
+macro dispatch_vectorized_input_and_cfs(func)
+    :( $func(input::AbstractVector{<:AbstractVector{Float64}}, cf::AbstractVector{Float64}; kwargs...) = map(signal -> transpose(hcat(map(x -> $func(signal, x; kwargs...), cf)...)), input) )
+end
+
+
+
+"""
     sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="cat")
 
 Simulates inner hair cell potential for given acoustic input.
@@ -163,15 +203,10 @@ function sim_ihc_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Float6
     return output
 end
 
+@dispatch_vectorized_input(sim_ihc_zbc2014)
+@dispatch_vectorized_cfs(sim_ihc_zbc2014)
+@dispatch_vectorized_input_and_cfs(sim_ihc_zbc2014)
 
-function sim_ihc_zbc2014(input::AbstractArray{Float64, N}, cf::Float64; kwargs...) where {N}
-    mapslices(signal -> sim_ihc_zbc2014(signal, cf; kwargs...), input; dims=N)
-end
-
-
-function sim_ihc_zbc2014(input::AbstractArray{T, N}, cf::Float64; kwargs...) where {N, T<:AbstractArray}
-    map(signal -> sim_ihc_zbc2014(signal, cf), input; kwargs...)
-end
 
 
 """
@@ -211,21 +246,15 @@ function sim_synapse_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Fl
     return output
 end
 
-
-function sim_synapse_zbc2014(input::AbstractArray{Float64, N}, cf::Float64; kwargs...) where {N}
-    mapslices(signal -> sim_synapse_zbc2014(signal, cf; kwargs...), input; dims=N)
-end
-
-
-function sim_synapse_zbc2014(input::AbstractArray{T, N}, cf::Float64; kwargs...) where {N, T<:AbstractArray}
-    map(signal -> sim_synapse_zbc2014(signal, cf), input; kwargs...)
-end
+@dispatch_vectorized_input(sim_synapse_zbc2014)
+@dispatch_vectorized_cfs(sim_synapse_zbc2014)
+@dispatch_vectorized_input_and_cfs(sim_synapse_zbc2014)
 
 
 """
     sim_an_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, frac_noise="approximate", noise_type="ffGn", n_rep=1)
 
-Simulates auditory nerve output (spikes or firing rate) for a given inner hair cell input
+Simulates auditory nerve output (spikes and firing rate) for a given inner hair cell input
 
 # Arguments
 - `input::AbstractVector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
@@ -259,23 +288,55 @@ function sim_an_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Float64
     # Make call
     SingleAN!(input, cf, Int32(n_rep), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, 
               meanrate, varrate, psth)
-    # Return
     return (meanrate, varrate, psth)
 end
 
 
-function sim_an_zbc2014(input::AbstractArray{Float64, N}, cf::Float64; kwargs...) where {N}
-    mapslices(signal -> sim_an_zbc2014(signal, cf; kwargs...), input; dims=N)
+"""
+    sim_anrate_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, frac_noise="approximate", noise_type="ffGn", n_rep=1)
+
+Simulates auditory nerve output (firing rate only) for a given inner hair cell input
+
+# Arguments
+- `input::AbstractVector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
+- `cf::Float64`: characteristic frequency of the fiber in Hz
+- `fs::Float64`: sampling rate of the *input* in Hz
+- `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
+- `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
+- `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
+- `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
+- `n_rep::Int64`: number of repetititons to run (note that this does not appear to work correctly for the time being)
+
+# Returns
+- `meanrate::Array{Float64, 1}`: analytical estimate of instantaneous firing rate
+"""
+function sim_anrate_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Float64=10e4,
+                        fiber_type::String="high", power_law::String="approximate",
+                        fractional::Bool=false, n_rep::Int64=1)
+
+    # Map fiber type string to float code expected by Synapse!
+    fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
+    # Map power-law implementation type to float code expected by Syanpse!
+    implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[power_law]
+    # Map fractional to float code expected by Syanpse!
+    noiseType = Dict([(true, 1.0), (false, 0.0)])[fractional]
+    # Create empty array for output
+    meanrate = zeros((length(input), ))
+    varrate = zeros((length(input), ))
+    psth = zeros((length(input), ))
+    # Make call
+    SingleAN!(input, cf, Int32(n_rep), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, 
+              meanrate, varrate, psth)
+    return meanrate
 end
 
-
-function sim_an_zbc2014(input::AbstractArray{T, N}, cf::Float64; kwargs...) where {N, T<:AbstractArray}
-    map(signal -> sim_an_zbc2014(signal, cf), input; kwargs...)
-end
+@dispatch_vectorized_input(sim_anrate_zbc2014)
+@dispatch_vectorized_cfs(sim_anrate_zbc2014)
+@dispatch_vectorized_input_and_cfs(sim_anrate_zbc2014)
 
 
 """
-    sim_an_zbc2001(input, cf; fs=100e3)
+    sim_an_hcc2001(input, cf; fs=100e3)
 
 Simulates auditory nerve output (instantaneous firing rate) for a given acoustic input.
 
@@ -335,16 +396,9 @@ function sim_an_hcc2001(input::AbstractArray{Float64, 1}, cf::Float64; fs::Float
     return P_I .* C_I
 end
 
-
-function sim_an_hcc2001(input::AbstractArray{Float64, N}, cf::Float64; kwargs...) where {N}
-    mapslices(signal -> sim_an_hcc2001(signal, cf; kwargs...), input; dims=N)
-end
-
-
-function sim_an_hcc2001(input::AbstractArray{T, N}, cf::Float64; kwargs...) where {N, T<:AbstractArray}
-    map(signal -> sim_an_hcc2001(signal, cf), input; kwargs...)
-end
-
+@dispatch_vectorized_input(sim_an_hcc2001)
+@dispatch_vectorized_cfs(sim_an_hcc2001)
+@dispatch_vectorized_input_and_cfs(sim_an_hcc2001)
 
 
 """
