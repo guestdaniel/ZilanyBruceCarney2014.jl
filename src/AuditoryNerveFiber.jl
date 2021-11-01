@@ -192,6 +192,25 @@ macro dispatch_matrix_input(func)
     )
 end
 
+"""
+    dispatch_vector_of_matrix_input(func)
+
+Macro that defines a method for model functions dispatched over a vector of matrix inputs and a vector of cfs
+
+# Arguments
+- `func`: A function implementing an "input" the first position arg, and "cf" as the second, otherwise accepting kwargs
+"""
+
+macro dispatch_vector_of_matrix_input(func)
+    :( 
+    function $func(input::AbstractVector{<:AbstractMatrix{Float64}}, cf::AbstractVector{Float64}; kwargs...) 
+        map(neurogram -> $func(neurogram, cf; kwargs...), input)
+    end
+    )
+end
+
+
+
 
 """
     sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="cat")
@@ -227,7 +246,7 @@ end
 @dispatch_vectorized_cfs(sim_ihc_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_ihc_zbc2014)
 @dispatch_matrix_input(sim_ihc_zbc2014)
-
+@dispatch_vector_of_matrix_input(sim_ihc_zbc2014)
 
 
 """
@@ -271,6 +290,7 @@ end
 @dispatch_vectorized_cfs(sim_synapse_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_synapse_zbc2014)
 @dispatch_matrix_input(sim_synapse_zbc2014)
+@dispatch_vector_of_matrix_input(sim_synapse_zbc2014)
 
 
 """
@@ -356,6 +376,7 @@ end
 @dispatch_vectorized_cfs(sim_anrate_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_anrate_zbc2014)
 @dispatch_matrix_input(sim_anrate_zbc2014)
+@dispatch_vector_of_matrix_input(sim_anrate_zbc2014)
 
 
 """
@@ -423,6 +444,7 @@ end
 @dispatch_vectorized_cfs(sim_an_hcc2001)
 @dispatch_vectorized_input_and_cfs(sim_an_hcc2001)
 @dispatch_matrix_input(sim_an_hcc2001)
+@dispatch_vector_of_matrix_input(sim_an_hcc2001)
 
 
 """
