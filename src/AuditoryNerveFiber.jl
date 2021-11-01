@@ -171,6 +171,26 @@ macro dispatch_vectorized_input_and_cfs(func)
     :( $func(input::AbstractVector{<:AbstractVector{Float64}}, cf::AbstractVector{Float64}; kwargs...) = map(signal -> transpose(hcat(map(x -> $func(signal, x; kwargs...), cf)...)), input) )
 end
 
+"""
+    dispatch_matrix_input(func)
+
+Macro that defines a method for model functions dispatched over a matrix inputs and a vector of cfs
+
+# Arguments
+- `func`: A function implementing an "input" the first position arg, and "cf" as the second, otherwise accepting kwargs
+"""
+
+macro dispatch_matrix_input(func)
+    :( 
+    function $func(input::AbstractMatrix{Float64}, cf::AbstractVector{Float64}; kwargs...) 
+        output = zeros(size(input))
+        for row in 1:size(input)[1]
+            output[row, :] = $func(input[row, :], cf[row]; kwargs...)
+        end
+        return output 
+    end
+    )
+end
 
 
 """
@@ -206,6 +226,7 @@ end
 @dispatch_vectorized_input(sim_ihc_zbc2014)
 @dispatch_vectorized_cfs(sim_ihc_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_ihc_zbc2014)
+@dispatch_matrix_input(sim_ihc_zbc2014)
 
 
 
@@ -249,6 +270,7 @@ end
 @dispatch_vectorized_input(sim_synapse_zbc2014)
 @dispatch_vectorized_cfs(sim_synapse_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_synapse_zbc2014)
+@dispatch_matrix_input(sim_synapse_zbc2014)
 
 
 """
@@ -333,6 +355,7 @@ end
 @dispatch_vectorized_input(sim_anrate_zbc2014)
 @dispatch_vectorized_cfs(sim_anrate_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_anrate_zbc2014)
+@dispatch_matrix_input(sim_anrate_zbc2014)
 
 
 """
@@ -399,6 +422,7 @@ end
 @dispatch_vectorized_input(sim_an_hcc2001)
 @dispatch_vectorized_cfs(sim_an_hcc2001)
 @dispatch_vectorized_input_and_cfs(sim_an_hcc2001)
+@dispatch_matrix_input(sim_an_hcc2001)
 
 
 """
