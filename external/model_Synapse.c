@@ -277,7 +277,7 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
   /*------ Downsampling to sampFreq (Low) sampling rate ------*/
   /*----------------------------------------------------------*/
   /* Call the function pointer passed in as decimate, which is a Julia function */
-  sampIHC = decimate(powerLawIn, k, resamp);
+  sampIHC = decimate(powerLawIn, (int)ceil(totalstim*nrep+3*delaypoint), resamp);
 
   free(powerLawIn); free(exponOut);
 
