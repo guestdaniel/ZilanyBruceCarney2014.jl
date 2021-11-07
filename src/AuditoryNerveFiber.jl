@@ -28,9 +28,7 @@ end
 
 Synthesize a sample of fractional Gaussian noise.
 
-This is a direct translation of Python code written by Marek Rudnicki in the cochlea package
-(https://github.com/mrkrd/cochlea). Note that this function returns a pointer instead of 
-a Julia array as it is expected to be called from within C.
+Note that this function returns a pointer instead of a Julia array, as it is expected to be called from within C.
 """
 function ffGn(N::Int32, tdres::Float64, Hinput::Float64, noiseType::Float64, mu::Float64; safety::Int64=4)
     # Start by handling noiseType
@@ -159,7 +157,7 @@ Upsamples a 1D signal by a factor of resamp.
 # Warnings
 - This function is (very marginally) affected by a known issue with DSP.resample. The function uses DSP.resample and pads a few zeros to compensate for the few samples gobbled by the upsampling filter (see issue at https://github.com/JuliaDSP/DSP.jl/issues/104).
 """
-function upsample(original_signal::Array{Float64, 1}, resamp::Int64)
+function upsample(original_signal::Vector{Float64}, resamp::Int64)
     # Directly upsample using DSP.resample
     upsampled_signal = DSP.resample(original_signal, resamp)
     upsampled_signal = [upsampled_signal; zeros(length(original_signal)*resamp - length(upsampled_signal))]
@@ -260,7 +258,7 @@ Simulates inner hair cell potential for given acoustic input.
 - `species::String`: species, either ("cat" = cat, "human" = humans with Shera tuning, "human_glasberg" = humans with Glasberg tuning)
 
 # Returns
-- `output::Array{Float64, 1}`: inner hair cell potential output
+- `output::Vector{Float64}`: inner hair cell potential output
 """
 function sim_ihc_zbc2014(
     input::AbstractVector{Float64}, 
@@ -304,7 +302,7 @@ Simulates synapse output for a given inner hair cell input
 - `n_rep::Int64`: number of repetititons to run (note that this does not appear to work correctly for the time being)
 
 # Returns
-- `output::Array{Float64, 1}`: synapse output (unknown units?)
+- `output::Vector{Float64}`: synapse output (unknown units?)
 """
 function sim_synapse_zbc2014(
     input::AbstractVector{Float64}, 
@@ -353,14 +351,19 @@ Simulates auditory nerve output (spikes and firing rate) for a given inner hair 
 - `n_rep::Int64`: number of repetititons to run (note that this does not appear to work correctly for the time being)
 
 # Returns
-- `meanrate::Array{Float64, 1}`: analytical estimate of instantaneous firing rate
-- `varrrate::Array{Float64, 1}`: analytical estimate of instantaneous firing rate variance
-- `psth::Array{Float64, 1}`: peri-stimulus time histogram 
+- `meanrate::Vector{Float64}`: analytical estimate of instantaneous firing rate
+- `varrrate::Vector{Float64}`: analytical estimate of instantaneous firing rate variance
+- `psth::Vector{Float64}`: peri-stimulus time histogram 
 """
-function sim_an_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Float64=10e4,
-                        fiber_type::String="high", power_law::String="approximate",
-                        fractional::Bool=false, n_rep::Int64=1)
-
+function sim_an_zbc2014(
+    input::AbstractVector{Float64}, 
+    cf::Float64; 
+    fs::Float64=10e4,
+    fiber_type::String="high", 
+    power_law::String="approximate",
+    fractional::Bool=false, 
+    n_rep::Int64=1
+)
     # Map fiber type string to float code expected by Synapse!
     fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
     # Map power-law implementation type to float code expected by Syanpse!
@@ -394,12 +397,16 @@ Simulates auditory nerve output (firing rate only) for a given inner hair cell i
 - `n_rep::Int64`: number of repetititons to run (note that this does not appear to work correctly for the time being)
 
 # Returns
-- `meanrate::Array{Float64, 1}`: analytical estimate of instantaneous firing rate
+- `meanrate::Vector{Float64}`: analytical estimate of instantaneous firing rate
 """
-function sim_anrate_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Float64=10e4,
-                        fiber_type::String="high", power_law::String="approximate",
-                        fractional::Bool=false, n_rep::Int64=1)
-
+function sim_anrate_zbc2014(
+    input::AbstractVector{Float64}, 
+    cf::Float64; fs::Float64=10e4,
+    fiber_type::String="high", 
+    power_law::String="approximate",
+    fractional::Bool=false, 
+    n_rep::Int64=1
+)
     # Map fiber type string to float code expected by Synapse!
     fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
     # Map power-law implementation type to float code expected by Syanpse!
@@ -411,8 +418,7 @@ function sim_anrate_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Flo
     varrate = zeros((length(input), ))
     psth = zeros((length(input), ))
     # Make call
-    SingleAN!(input, cf, Int32(n_rep), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, 
-              meanrate, varrate, psth)
+    SingleAN!(input, cf, Int32(n_rep), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, meanrate, varrate, psth)
     return meanrate
 end
 
@@ -434,9 +440,9 @@ Simulates auditory nerve output (instantaneous firing rate) for a given acoustic
 - `fs::Float64`: sampling rate of the input (Hz)
 
 # Returns
-- `::Array{Float64, 1}`: Instantaneous firing rate (spikes/s)
+- `::Vector{Float64}`: Instantaneous firing rate (spikes/s)
 """
-function sim_an_hcc2001(input::AbstractArray{Float64, 1}, cf::Float64; fs::Float64=10e4)
+function sim_an_hcc2001(input::AbstractVector{Float64}, cf::Float64; fs::Float64=10e4)
     # Calculate gammatone filterbank response
     filterbank = make_erb_filterbank(fs, 1, cf)
     bm = filt(filterbank, input)
@@ -502,7 +508,7 @@ corresponding types in C. Note that while there are type checks enforced automat
 Julia, there are no sanity checks on any arguments.
 
 # Arguments
-- `px::Array{Float64, 1}`: sound pressure waveform in pascals
+- `px::Vector{Float64}`: sound pressure waveform in pascals
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `nrep::Int32`: number of repetitions to simulate. Note that for the IHC simulation, one "true" simulation is conducted and then that simulation is copied and tiled (because there is no randomness in the IHC simulation) to simulate multiple times.
 - `tdres::Float64`: time-domain resolution (i.e., reciprocal of sampling rate)
@@ -510,20 +516,40 @@ Julia, there are no sanity checks on any arguments.
 - `cohc::Float64`: outer hair cell survival (from 0 to 1)
 - `cihc::Float64`: inner hair cell survival (from 0 to 1)
 - `species::Int32`: species, either (1 = cat, 2 = humans with Shera tuning, 3 = humans with Glasberg tuning)
-- `ihcout::Array{Float64, 1}`: array of same size as `px`, used to store output from C
+- `ihcout::Vector{Float64}`: array of same size as `px`, used to store output from C
 """
-function IHCAN!(px::Array{Float64, 1}, cf::Float64, nrep::Int32, tdres::Float64,
-                totalstim::Int32, cohc::Float64, cihc::Float64, species::Int32,
-                ihcout::Array{Float64, 1})
-    ccall((:IHCAN, libzbc2014), Cvoid, (Ptr{Cdouble}, Cdouble, Cint, Cdouble, Cint,
-                                    Cdouble, Cdouble, Cint, Ptr{Cdouble}),
-          px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout)
+function IHCAN!(
+    px::Vector{Float64}, 
+    cf::Float64, 
+    nrep::Int32, 
+    tdres::Float64,
+    totalstim::Int32, 
+    cohc::Float64, 
+    cihc::Float64, 
+    species::Int32,
+    ihcout::Vector{Float64}
+)
+    ccall(
+            (:IHCAN, libzbc2014),    # function call
+            Cvoid,                   # return type
+            (                        # arg types
+                Ptr{Cdouble},        # px
+                Cdouble,             # cf
+                Cint,                # nrep
+                Cdouble,             # tdres
+                Cint,                # totalstim
+                Cdouble,             # cohc
+                Cdouble,             # cihc
+                Cint,                # species
+                Ptr{Cdouble}         # ihcout
+            ),
+            px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout  # pass arguments
+        )
 end
 
 
 """
-    Synapse!(ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, 
-             synouttmp)
+    Synapse!(ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp)
 
 Direct binding to Synapse C function in model_Synapse.c
 
@@ -533,7 +559,7 @@ corresponding types in C. Note that while there are type checks enforced automat
 Julia, there are no sanity checks on any arguments.
 
 # Arguments
-- `ihcout::Array{Float64, 1}`: output from IHC simulation (`IHCAN!`)
+- `ihcout::Vector{Float64}`: output from IHC simulation (`IHCAN!`)
 - `tdres::Float64`: time-domain resolution (i.e., reciprocal of sampling rate)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `totalstim::Int32`: number of samples in simulation
@@ -542,34 +568,46 @@ Julia, there are no sanity checks on any arguments.
 - `noiseType::Float64`: whether we use ffGn or not (1.0 == ffGn, 0.0 == not)
 - `implnt::Float64`: whether or not to use exact implementation of power-law adaptation, either (1.0 == actual, 0.0 == approximate)
 - `sampFreq::Float64`: sampling frequency of the power law stage in Hz. Simulations are decimated to sampFreq from 1/tdres before the power law stage and then upsampled back to the original sampling rate. The product of tdres and sampFreq, which indicates the amount to decimate by, must be an integer
-- `synouttmp::Array{Float64, 1}`: array of same size as `ihcout`, used to store output from C
+- `synouttmp::Vector{Float64}`: array of same size as `ihcout`, used to store output from C
 """
-function Synapse!(ihcout::Array{Float64, 1}, tdres::Float64, cf::Float64,
-                  totalstim::Int32, nrep::Int32, spont::Float64,
-                  noiseType::Float64, implnt::Float64, sampFreq::Float64,
-                  synouttmp::Array{Float64, 1})
-    ccall((:Synapse, libzbc2014), Cdouble, 
-          (Ptr{Cdouble}, # ihcout
-           Cdouble,      # tdres
-           Cdouble,      # cf
-           Cint,         # totalstim
-           Cint,         # nrep
-           Cdouble,      # spont
-           Cdouble,      # noiseType
-           Cdouble,      # implnt
-           Cdouble,      # sampFreq
-           Ptr{Cdouble}, # synouttmp
-           Ptr{nothing}, # ffGn
-           Ptr{nothing}),# decimate
-          ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp, 
-          @cfunction(ffGn, Ptr{Cdouble}, (Cint, Cdouble, Cdouble, Cdouble, Cdouble)), 
-          @cfunction(decimate_fft, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)))
+function Synapse!(
+    ihcout::Vector{Float64}, 
+    tdres::Float64, 
+    cf::Float64,
+    totalstim::Int32, 
+    nrep::Int32, 
+    spont::Float64,
+    noiseType::Float64, 
+    implnt::Float64, 
+    sampFreq::Float64,
+    synouttmp::Vector{Float64}
+)
+    ccall(
+            (:Synapse, libzbc2014),  # function call
+            Cdouble,                 # return type
+            (
+                Ptr{Cdouble}, # ihcout
+                Cdouble,      # tdres
+                Cdouble,      # cf
+                Cint,         # totalstim
+                Cint,         # nrep
+                Cdouble,      # spont
+                Cdouble,      # noiseType
+                Cdouble,      # implnt
+                Cdouble,      # sampFreq
+                Ptr{Cdouble}, # synouttmp
+                Ptr{nothing}, # ffGn
+                Ptr{nothing}  # decimate_fft
+            ),
+            ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp,   # input args
+            @cfunction(ffGn, Ptr{Cdouble}, (Cint, Cdouble, Cdouble, Cdouble, Cdouble)),          # input cfunction
+            @cfunction(decimate_fft, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint))                   # input cfunction
+        )
 end
 
 
 """
-    SingleAN!(ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt, meanrate, 
-              varrate, psth)
+    SingleAN!(ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt, meanrate, varrate, psth)
 
 Direct binding to Synapse C function in model_Synapse.c
 
@@ -579,7 +617,7 @@ corresponding types in C. Note that while there are type checks enforced automat
 Julia, there are no sanity checks on any arguments.
 
 # Arguments
-- `ihcout::Array{Float64, 1}`: output from IHC simulation (`IHCAN!`)
+- `ihcout::Vector{Float64}`: output from IHC simulation (`IHCAN!`)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `nrep::Int32`: number of repetitions to simulate.
 - `tdres::Float64`: time-domain resolution (i.e., reciprocal of sampling rate)
@@ -587,35 +625,47 @@ Julia, there are no sanity checks on any arguments.
 - `fibertype::Float64`: fiber type, either (1.0 == low, 2.0 == med, 3.0 == high)
 - `noiseType::Float64`: whether we use ffGn or not (1.0 == ffGn, 0.0 == not)
 - `implnt::Float64`: whether or not to use exact implementation of power-law adaptation, either (1.0 == actual, 0.0 == approximate)
-- `meanrate::Array{Float64, 1}`: array of same size as `ihcout`, used to store analytical firing rate output
-- `varrate::Array{Float64, 1}`: array of same size as `ihcout`, used to store analytical firing rate variance output
-- `psth::Array{Float64, 1}`: array of same size as `ihcout`, used to store empirical PSTH output
+- `meanrate::Vector{Float64}`: array of same size as `ihcout`, used to store analytical firing rate output
+- `varrate::Vector{Float64}`: array of same size as `ihcout`, used to store analytical firing rate variance output
+- `psth::Vector{Float64}`: array of same size as `ihcout`, used to store empirical PSTH output
 """
-function SingleAN!(ihcout::Array{Float64, 1}, cf::Float64, nrep::Int32,
-                   tdres::Float64, totalstim::Int32, fibertype::Float64,
-                   noiseType::Float64, implnt::Float64,
-                   meanrate::Array{Float64, 1}, varrate::Array{Float64, 1},
-                   psth::Array{Float64, 1})
-    ccall((:SingleAN, libzbc2014), Cvoid, 
-          (Ptr{Cdouble},  # ihcout
-           Cdouble,       # cf
-           Cint,          # nrep
-           Cdouble,       # tdres
-           Cint,          # totalstim
-           Cdouble,       # fibertype
-           Cdouble,       # noiseType
-           Cdouble,       # implnt
-           Ptr{Cdouble},  # meanrate
-           Ptr{Cdouble},  # varrate
-           Ptr{Cdouble},  # psth
-           Ptr{nothing},  # ffGn
-           Ptr{nothing},  # decimate
-           Ptr{nothing}), # random_numbers
-          ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt,
-          meanrate, varrate, psth, 
-          @cfunction(ffGn, Ptr{Cdouble}, (Cint, Cdouble, Cdouble, Cdouble, Cdouble)), 
-          @cfunction(decimate_fft, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)),
-          @cfunction(random_numbers, Ptr{Cdouble}, (Cint, )))
+function SingleAN!(
+    ihcout::Vector{Float64}, 
+    cf::Float64, 
+    nrep::Int32,
+    tdres::Float64, 
+    totalstim::Int32, 
+    fibertype::Float64,
+    noiseType::Float64, 
+    implnt::Float64,
+    meanrate::Vector{Float64}, 
+    varrate::Vector{Float64},
+    psth::Vector{Float64}
+)
+    ccall(
+            (:SingleAN, libzbc2014),  # function call
+            Cvoid,                    # return type
+            (
+                Ptr{Cdouble},  # ihcout
+                Cdouble,       # cf
+                Cint,          # nrep
+                Cdouble,       # tdres
+                Cint,          # totalstim
+                Cdouble,       # fibertype
+                Cdouble,       # noiseType
+                Cdouble,       # implnt
+                Ptr{Cdouble},  # meanrate
+                Ptr{Cdouble},  # varrate
+                Ptr{Cdouble},  # psth
+                Ptr{nothing},  # ffGn
+                Ptr{nothing},  # decimate
+                Ptr{nothing}   # random_numbers
+            ),
+            ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt, meanrate, varrate, psth,  # input args
+            @cfunction(ffGn, Ptr{Cdouble}, (Cint, Cdouble, Cdouble, Cdouble, Cdouble)),                 # input cfunction
+            @cfunction(decimate_fft, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)),                         # input cfunction
+            @cfunction(random_numbers, Ptr{Cdouble}, (Cint, ))                                          # input cfunction
+        )        
 end
 
 end # module
