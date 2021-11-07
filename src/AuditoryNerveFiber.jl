@@ -121,7 +121,7 @@ This function is intended to be called from C on a C array. Hence, it accepts a 
 array and returns a pointer to an output array. It uses a method adapted from scipy.signal wherein
 filtering is done in the spectral domain. 
 """
-function decimate_fft(original_signal::AbstractVector{Float64}, k::Int64, resamp::Int64)
+function decimate_fft(original_signal::Vector{Float64}, k::Int64, resamp::Int64)
     X = rfft(original_signal)
     N = Int(floor(k/resamp))
     if mod(N+1, 2) == 0.0
@@ -176,7 +176,7 @@ Macro that defines a method for model functions dispatched over a vector of inpu
 """
 
 macro dispatch_vectorized_input(func)
-    :( $func(input::AbstractVector{<:AbstractVector{Float64}}, cf::Float64; kwargs...) = map(signal -> $func(signal, cf; kwargs...), input) )
+    :( $func(input::Vector{<:Vector{Float64}}, cf::Float64; kwargs...) = map(signal -> $func(signal, cf; kwargs...), input) )
 end
 
 """
@@ -189,7 +189,7 @@ Macro that defines a method for model functions dispatched over a vector of cfs
 """
 
 macro dispatch_vectorized_cfs(func)
-    :( $func(input::AbstractVector{Float64}, cf::AbstractVector{Float64}; kwargs...) = transpose(hcat(map(x -> $func(input, x; kwargs...), cf)...)) )
+    :( $func(input::Vector{Float64}, cf::Vector{Float64}; kwargs...) = transpose(hcat(map(x -> $func(input, x; kwargs...), cf)...)) )
 end
 
 """
@@ -202,7 +202,7 @@ Macro that defines a method for model functions dispatched over a vector of inpu
 """
 
 macro dispatch_vectorized_input_and_cfs(func)
-    :( $func(input::AbstractVector{<:AbstractVector{Float64}}, cf::AbstractVector{Float64}; kwargs...) = map(signal -> transpose(hcat(map(x -> $func(signal, x; kwargs...), cf)...)), input) )
+    :( $func(input::Vector{<:Vector{Float64}}, cf::Vector{Float64}; kwargs...) = map(signal -> transpose(hcat(map(x -> $func(signal, x; kwargs...), cf)...)), input) )
 end
 
 """
@@ -216,7 +216,7 @@ Macro that defines a method for model functions dispatched over a matrix inputs 
 
 macro dispatch_matrix_input(func)
     :( 
-    function $func(input::AbstractMatrix{Float64}, cf::AbstractVector{Float64}; kwargs...) 
+    function $func(input::AbstractMatrix{Float64}, cf::Vector{Float64}; kwargs...) 
         output = zeros(size(input))
         for row in 1:size(input)[1]
             output[row, :] = $func(input[row, :], cf[row]; kwargs...)
@@ -237,7 +237,7 @@ Macro that defines a method for model functions dispatched over a vector of matr
 
 macro dispatch_vector_of_matrix_input(func)
     :( 
-    function $func(input::AbstractVector{<:AbstractMatrix{Float64}}, cf::AbstractVector{Float64}; kwargs...) 
+    function $func(input::Vector{<:AbstractMatrix{Float64}}, cf::Vector{Float64}; kwargs...) 
         map(neurogram -> $func(neurogram, cf; kwargs...), input)
     end
     )
@@ -250,7 +250,7 @@ end
 Simulates inner hair cell potential for given acoustic input.
 
 # Arguments
-- `input::AbstractVector{Float64}`: sound pressure waveform in pascals
+- `input::Vector{Float64}`: sound pressure waveform in pascals
 - `cf::Float64`: characteristic frequency of the IHC in Hz
 - `fs::Float64`: sampling rate in Hz
 - `cohc::Float64`: outer hair cell survival (from 0 to 1)
@@ -261,7 +261,7 @@ Simulates inner hair cell potential for given acoustic input.
 - `output::Vector{Float64}`: inner hair cell potential output
 """
 function sim_ihc_zbc2014(
-    input::AbstractVector{Float64}, 
+    input::Vector{Float64}, 
     cf::Float64; 
     fs::Float64=10e4,
     cohc::Float64=1.0, 
@@ -292,7 +292,7 @@ end
 Simulates synapse output for a given inner hair cell input
 
 # Arguments
-- `input::AbstractVector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
+- `input::Vector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `fs::Float64`: sampling rate of the *input* in Hz
 - `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
@@ -305,7 +305,7 @@ Simulates synapse output for a given inner hair cell input
 - `output::Vector{Float64}`: synapse output (unknown units?)
 """
 function sim_synapse_zbc2014(
-    input::AbstractVector{Float64}, 
+    input::Vector{Float64}, 
     cf::Float64; 
     fs::Float64=10e4,
     fs_synapse::Float64=10e3, 
@@ -341,7 +341,7 @@ end
 Simulates auditory nerve output (spikes and firing rate) for a given inner hair cell input
 
 # Arguments
-- `input::AbstractVector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
+- `input::Vector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `fs::Float64`: sampling rate of the *input* in Hz
 - `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
@@ -356,7 +356,7 @@ Simulates auditory nerve output (spikes and firing rate) for a given inner hair 
 - `psth::Vector{Float64}`: peri-stimulus time histogram 
 """
 function sim_an_zbc2014(
-    input::AbstractVector{Float64}, 
+    input::Vector{Float64}, 
     cf::Float64; 
     fs::Float64=10e4,
     fiber_type::String="high", 
@@ -387,7 +387,7 @@ end
 Simulates auditory nerve output (firing rate only) for a given inner hair cell input
 
 # Arguments
-- `input::AbstractVector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
+- `input::Vector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
 - `cf::Float64`: characteristic frequency of the fiber in Hz
 - `fs::Float64`: sampling rate of the *input* in Hz
 - `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
@@ -400,7 +400,7 @@ Simulates auditory nerve output (firing rate only) for a given inner hair cell i
 - `meanrate::Vector{Float64}`: analytical estimate of instantaneous firing rate
 """
 function sim_anrate_zbc2014(
-    input::AbstractVector{Float64}, 
+    input::Vector{Float64}, 
     cf::Float64; fs::Float64=10e4,
     fiber_type::String="high", 
     power_law::String="approximate",
@@ -435,14 +435,14 @@ end
 Simulates auditory nerve output (instantaneous firing rate) for a given acoustic input.
 
 # Arguments
-- `input::AbstractVector{Float64}`: acoustic stimulus (Pa)
+- `input::Vector{Float64}`: acoustic stimulus (Pa)
 - `cf::Float64`: characteristic frequency of the fiber (Hz)
 - `fs::Float64`: sampling rate of the input (Hz)
 
 # Returns
 - `::Vector{Float64}`: Instantaneous firing rate (spikes/s)
 """
-function sim_an_hcc2001(input::AbstractVector{Float64}, cf::Float64; fs::Float64=10e4)
+function sim_an_hcc2001(input::Vector{Float64}, cf::Float64; fs::Float64=10e4)
     # Calculate gammatone filterbank response
     filterbank = make_erb_filterbank(fs, 1, cf)
     bm = filt(filterbank, input)
