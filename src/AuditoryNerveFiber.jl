@@ -5,6 +5,7 @@ using DSP
 using FFTW
 using AuditoryFilters
 using libzbc2014_jll
+#const fast_libzbc = "/home/daniel/AuditoryNerveFiber.jl/external/libzbc2014.so"
 
 # Handle exports
 export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014, sim_an_hcc2001
@@ -245,8 +246,6 @@ macro dispatch_vector_of_matrix_input(func)
 end
 
 
-
-
 """
     sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="cat")
 
@@ -258,21 +257,26 @@ Simulates inner hair cell potential for given acoustic input.
 - `fs::Float64`: sampling rate in Hz
 - `cohc::Float64`: outer hair cell survival (from 0 to 1)
 - `cihc::Float64`: inner hair cell survival (from 0 to 1)
-- `species::Int32`: species, either ("cat" = cat, "human" = humans with Shera tuning, "human_glasberg" = humans with Glasberg tuning)
+- `species::String`: species, either ("cat" = cat, "human" = humans with Shera tuning, "human_glasberg" = humans with Glasberg tuning)
 
 # Returns
 - `output::Array{Float64, 1}`: inner hair cell potential output
 """
-function sim_ihc_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Float64=10e4,
-                         cohc::Float64=1.0, cihc::Float64=1.0, species::String="cat",
-                         n_rep::Int64=1)
+function sim_ihc_zbc2014(
+    input::AbstractVector{Float64}, 
+    cf::Float64; 
+    fs::Float64=10e4,
+    cohc::Float64=1.0, 
+    cihc::Float64=1.0, 
+    species::String="human",
+    n_rep::Int64=1
+)
     # Map species string to species integer expected by IHCAN!
     species_flag = Dict([("cat", 1), ("human", 2), ("human_glasberg", 3)])[species]
     # Create empty array for output
     output = zeros((length(input)*n_rep, ))
     # Make call
-    IHCAN!(input, cf, Int32(n_rep), 1/fs, Int32(length(input)), cohc, cihc, Int32(species_flag), 
-           output);
+    IHCAN!(input, cf, Int32(n_rep), 1/fs, Int32(length(input)), cohc, cihc, Int32(species_flag), output);
     # Return
     return output
 end
@@ -302,10 +306,16 @@ Simulates synapse output for a given inner hair cell input
 # Returns
 - `output::Array{Float64, 1}`: synapse output (unknown units?)
 """
-function sim_synapse_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Float64=10e4,
-                             fs_synapse::Float64=10e3, fiber_type::String="high", 
-                             power_law::String="approximate", fractional::Bool=false,
-                             n_rep::Int64=1)
+function sim_synapse_zbc2014(
+    input::AbstractVector{Float64}, 
+    cf::Float64; 
+    fs::Float64=10e4,
+    fs_synapse::Float64=10e3, 
+    fiber_type::String="high", 
+    power_law::String="approximate", 
+    fractional::Bool=false,
+    n_rep::Int64=1
+)
     # Map fiber type string to float code expected by Synapse!
     spont = Dict([("low", 0.1), ("medium", 4.0), ("high", 100.0)])[fiber_type]
     # Map power-law implementation type to float code expected by Syanpse!
@@ -315,8 +325,7 @@ function sim_synapse_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Fl
     # Create empty array for output
     output = zeros((length(input), ))
     # Make call
-    Synapse!(input, 1.0/fs, cf, Int32(length(input)), Int32(n_rep), spont, noiseType, implnt, 
-             fs_synapse, output)
+    Synapse!(input, 1.0/fs, cf, Int32(length(input)), Int32(n_rep), spont, noiseType, implnt, fs_synapse, output)
     # Return
     return output
 end
@@ -346,7 +355,7 @@ Simulates auditory nerve output (spikes and firing rate) for a given inner hair 
 # Returns
 - `meanrate::Array{Float64, 1}`: analytical estimate of instantaneous firing rate
 - `varrrate::Array{Float64, 1}`: analytical estimate of instantaneous firing rate variance
-- `psth::Array{Float64, 1}`: peri-stimulus time histogram (NOT IMPLEMENTED, SHOULD BE EMPTY)
+- `psth::Array{Float64, 1}`: peri-stimulus time histogram 
 """
 function sim_an_zbc2014(input::AbstractVector{Float64}, cf::Float64; fs::Float64=10e4,
                         fiber_type::String="high", power_law::String="approximate",
