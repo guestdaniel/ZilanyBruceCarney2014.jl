@@ -8,11 +8,11 @@ sources = [
 
 script = raw"""
 cd ${WORKSPACE}/srcdir/
-gcc -c -Wall -fPIC -O3 model_IHC.c
-gcc -c -Wall -fPIC -O3 model_Synapse.c
-gcc -c -Wall -fPIC -O3 complex.c 
-gcc -c -Wall -fPIC -O3 test.c 
-gcc -shared -o libzbc2014.so model_IHC.o model_Synapse.o complex.o test.o
+clang -c -Wall -fPIC -Ofast model_IHC.c
+clang -c -Wall -fPIC -Ofast model_Synapse.c
+clang -c -Wall -fPIC -Ofast complex.c 
+clang -c -Wall -fPIC -Ofast test.c 
+clang -shared -o libzbc2014.so model_IHC.o model_Synapse.o complex.o test.o
 echo ${libdir}
 mkdir ${libdir}
 cp libzbc2014.so ${libdir}
