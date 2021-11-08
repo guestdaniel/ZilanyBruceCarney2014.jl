@@ -5,7 +5,6 @@ using DSP
 using FFTW
 using AuditoryFilters
 using libzbc2014_jll
-#const fast_libzbc = "/home/daniel/AuditoryNerveFiber.jl/external/libzbc2014.so"
 
 # Handle exports
 export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014, sim_an_hcc2001
@@ -110,42 +109,6 @@ function decimate(original_signal::Ptr{Cdouble}, k::Int32, resamp::Int32)
     temp_orig = unsafe_wrap(Array, original_signal, k)
     _resampled = resample(temp_orig, 1/resamp)
     return pointer(_resampled)
-end
-
-"""
-    decimate_fft(original_signal, k, resamp)
-
-Downsamples a 1D signal of length k by a factor of 1/resamp
-
-This function is intended to be called from C on a C array. Hence, it accepts a pointer to an 
-array and returns a pointer to an output array. It uses a method adapted from scipy.signal wherein
-filtering is done in the spectral domain. 
-"""
-function decimate_fft(original_signal::Vector{Float64}, k::Int64, resamp::Int64)
-    X = rfft(original_signal)
-    N = Int(floor(k/resamp))
-    if mod(N+1, 2) == 0.0
-        Y = X[1:Int((N+1)/2)]
-    else
-        Y = X[1:Int((N+2)/2)]
-    end
-    y = irfft(Y, N)
-    y .*= N / k
-    return y
-end
-
-function decimate_fft(original_signal::Ptr{Cdouble}, k::Int32, resamp::Int32)
-    temp_orig = unsafe_wrap(Array, original_signal, k)
-    X = rfft(temp_orig)
-    N = Int(floor(k/resamp))
-    if mod(N+1, 2) == 0.0
-        Y = X[1:Int((N+1)/2)]
-    else
-        Y = X[1:Int((N+2)/2)]
-    end
-    y = irfft(Y, N)
-    y .*= N / k
-    return pointer(y) 
 end
 
 
@@ -601,7 +564,7 @@ function Synapse!(
             ),
             ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp,   # input args
             @cfunction(ffGn, Ptr{Cdouble}, (Cint, Cdouble, Cdouble, Cdouble, Cdouble)),          # input cfunction
-            @cfunction(decimate_fft, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint))                   # input cfunction
+            @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint))                   # input cfunction
         )
 end
 
@@ -663,7 +626,7 @@ function SingleAN!(
             ),
             ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt, meanrate, varrate, psth,  # input args
             @cfunction(ffGn, Ptr{Cdouble}, (Cint, Cdouble, Cdouble, Cdouble, Cdouble)),                 # input cfunction
-            @cfunction(decimate_fft, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)),                         # input cfunction
+            @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)),                         # input cfunction
             @cfunction(random_numbers, Ptr{Cdouble}, (Cint, ))                                          # input cfunction
         )        
 end
