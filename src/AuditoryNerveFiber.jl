@@ -208,7 +208,7 @@ end
 
 
 """
-    sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="cat")
+    sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="human")
 
 Simulates inner hair cell potential for given acoustic input.
 
@@ -250,7 +250,7 @@ end
 
 
 """
-    sim_synapse_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, fiber_type="high", frac_noise="approximate", noise_type="ffGn", n_rep=1)
+    sim_synapse_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, fiber_type="high", power_law="approximate", fractional=false, n_rep=1)
 
 Simulates synapse output for a given inner hair cell input
 
@@ -261,8 +261,8 @@ Simulates synapse output for a given inner hair cell input
 - `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
-- `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
-- `n_rep::Int64`: number of repetititons to run (note that this does not appear to work correctly for the time being)
+- `fractional::Bool`: whether we use ffGn or not, one of (true, false)
+- `n_rep::Int64`: number of repetititons to run (warning: not sure this is working correctly right now! Use with caution!)
 
 # Returns
 - `output::Vector{Float64}`: synapse output (unknown units?)
@@ -299,7 +299,7 @@ end
 
 
 """
-    sim_an_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, frac_noise="approximate", noise_type="ffGn", n_rep=1)
+    sim_an_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, power_law="approximate", fractional=false, n_rep=1)
 
 Simulates auditory nerve output (spikes and firing rate) for a given inner hair cell input
 
@@ -311,7 +311,7 @@ Simulates auditory nerve output (spikes and firing rate) for a given inner hair 
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
 - `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
-- `n_rep::Int64`: number of repetititons to run (note that this does not appear to work correctly for the time being)
+- `n_rep::Int64`: number of repetititons to run (warning: not sure this is working correctly right now! Use with caution!)
 
 # Returns
 - `meanrate::Vector{Float64}`: analytical estimate of instantaneous firing rate
@@ -345,7 +345,7 @@ end
 
 
 """
-    sim_anrate_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, frac_noise="approximate", noise_type="ffGn", n_rep=1)
+    sim_anrate_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, power_law="approximate", fractional=false, n_rep=1)
 
 Simulates auditory nerve output (firing rate only) for a given inner hair cell input
 
