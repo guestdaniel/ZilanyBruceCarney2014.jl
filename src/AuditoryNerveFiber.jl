@@ -1,21 +1,20 @@
 module AuditoryNerveFiber
 
-# Handle imports
 using DSP
 using FFTW
 using AuditoryFilters
 using libzbc2014_jll
 
-# Handle exports
 export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014, sim_an_hcc2001
 
 
 """
-    random_numbers(length)
+    random_numbers(n)
 
-Generates random numbers like MATLAB's rand or Python's numpy.random.rand. Note that this
-function returns a pointer instead of a Julia array as we expect that it will be called from
-C and not Julia.
+Generates random n numbers like MATLAB's rand or Python's numpy.random.rand. 
+
+Note that this function returns a pointer instead of a Julia array as we expect that it will
+be called from C and not Julia.
 """
 function random_numbers(n::Int32)
     return pointer(rand(Float64, n))
@@ -27,9 +26,30 @@ end
 
 Synthesize a sample of fractional Gaussian noise.
 
-Note that this function returns a pointer instead of a Julia array, as it is expected to be called from within C.
+Adapted from the original MATLAB code avaialble at 
+https://www.urmc.rochester.edu/labs/carney/publications-code/auditory-models.aspx. 
+
+Note that this function returns a pointer instead of a Julia array, as it is expected to be 
+called from within C.
+
+# Arguments
+- `N::Int32`: length of the output sequence
+- `tdres::Float64`: reciprocal of the sampling rate (1/Hz)
+- `Hinput::Float64`: Hurst index. For 0 < H <= 1, we synthesize fractional Gaussian noise with Hurst index H. For 1 < H <= 2, we synthesize fractional Brownian motion with Hurst index H-1.
+- `noiseType::Float64`: If noiseType == 0, we return zeros, else we return fractional Gaussian noise
+- `mu::Float64`: Mean of the noise 
+
+# Warnings
+- This code was adapted from the MATLAB original, but has not been tested against the original. Use caution and test carefully! Report any bugs on GitHub.
 """
-function ffGn(N::Int32, tdres::Float64, Hinput::Float64, noiseType::Float64, mu::Float64; safety::Int64=4)
+function ffGn(
+    N::Int32, 
+    tdres::Float64, 
+    Hinput::Float64, 
+    noiseType::Float64, 
+    mu::Float64; 
+    safety::Int64=4
+)
     # Start by handling noiseType
     if noiseType == 0.0
         return pointer(zeros(N))
@@ -208,7 +228,7 @@ end
 
 
 """
-    sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="human")
+    sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="human", n_rep=1)
 
 Simulates inner hair cell potential for given acoustic input.
 
@@ -219,6 +239,7 @@ Simulates inner hair cell potential for given acoustic input.
 - `cohc::Float64`: outer hair cell survival (from 0 to 1)
 - `cihc::Float64`: inner hair cell survival (from 0 to 1)
 - `species::String`: species, either ("cat" = cat, "human" = humans with Shera tuning, "human_glasberg" = humans with Glasberg tuning)
+- `n_rep::Int64`: how many repeats of the input to return
 
 # Returns
 - `output::Vector{Float64}`: inner hair cell potential output
@@ -262,10 +283,13 @@ Simulates synapse output for a given inner hair cell input
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
 - `fractional::Bool`: whether we use ffGn or not, one of (true, false)
-- `n_rep::Int64`: number of repetititons to run (warning: not sure this is working correctly right now! Use with caution!)
+- `n_rep::Int64`: number of repetititons to run 
 
 # Returns
 - `output::Vector{Float64}`: synapse output (unknown units?)
+
+# Warnings
+- n_rep is not tested and it's not clear that it's producing the right output behavior. If you intend to use the n_rep argument for anything other than n_rep > 1, examine your outputs carefully and report any bugs to GitHub
 """
 function sim_synapse_zbc2014(
     input::Vector{Float64}, 
@@ -311,12 +335,15 @@ Simulates auditory nerve output (spikes and firing rate) for a given inner hair 
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
 - `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
-- `n_rep::Int64`: number of repetititons to run (warning: not sure this is working correctly right now! Use with caution!)
+- `n_rep::Int64`: number of repetititons to run
 
 # Returns
 - `meanrate::Vector{Float64}`: analytical estimate of instantaneous firing rate
 - `varrrate::Vector{Float64}`: analytical estimate of instantaneous firing rate variance
 - `psth::Vector{Float64}`: peri-stimulus time histogram 
+
+# Warnings
+- n_rep is not tested and it's not clear that it's producing the right output behavior. If you intend to use the n_rep argument for anything other than n_rep > 1, examine your outputs carefully and report any bugs to GitHub
 """
 function sim_an_zbc2014(
     input::Vector{Float64}, 
@@ -345,9 +372,9 @@ end
 
 
 """
-    sim_anrate_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, power_law="approximate", fractional=false, n_rep=1)
+    sim_anrate_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, power_law="approximate", fractional=false)
 
-Simulates auditory nerve output (firing rate only) for a given inner hair cell input
+Simulates auditory nerve output (instantaneous firing rate) for a given inner hair cell input
 
 # Arguments
 - `input::Vector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
@@ -357,7 +384,6 @@ Simulates auditory nerve output (firing rate only) for a given inner hair cell i
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
 - `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
-- `n_rep::Int64`: number of repetititons to run (note that this does not appear to work correctly for the time being)
 
 # Returns
 - `meanrate::Vector{Float64}`: analytical estimate of instantaneous firing rate
@@ -368,7 +394,6 @@ function sim_anrate_zbc2014(
     fiber_type::String="high", 
     power_law::String="approximate",
     fractional::Bool=false, 
-    n_rep::Int64=1
 )
     # Map fiber type string to float code expected by Synapse!
     fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
@@ -381,7 +406,7 @@ function sim_anrate_zbc2014(
     varrate = zeros((length(input), ))
     psth = zeros((length(input), ))
     # Make call
-    SingleAN!(input, cf, Int32(n_rep), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, meanrate, varrate, psth)
+    SingleAN!(input, cf, Int32(1), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, meanrate, varrate, psth)
     return meanrate
 end
 
@@ -395,7 +420,11 @@ end
 """
     sim_an_hcc2001(input, cf; fs=100e3)
 
-Simulates auditory nerve output (instantaneous firing rate) for a given acoustic input.
+Simulates auditory nerve output (instantaneous firing rate) for a given acoustic input. 
+
+Auditory-nerve model from the Heinz, Colburn, and Carney (2001) paper cited below. Includes
+a gammatone filterbank (basilar membrane stage), a saturating nonlinearity (IHC stage), and
+adaptation dynamics (AN stage).
 
 # Arguments
 - `input::Vector{Float64}`: acoustic stimulus (Pa)
