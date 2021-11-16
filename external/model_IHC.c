@@ -45,14 +45,14 @@
         Ibrahim, R. A., and Bruce, I. C. (2010). "Effects of peripheral tuning
   on the auditory nerve's representation of speech envelope and temporal fine
   structure cues," in The Neurophysiological Bases of Auditory Perception, eds.
-  E. A. Lopez-Poveda and A. R. Palmer and R. Meddis, Springer, NY, pp. 429–438.
+  E. A. Lopez-Poveda and A. R. Palmer and R. Meddis, Springer, NY, pp. 429ï¿½438.
 
    Please cite these papers if you publish any research
    results obtained with this code or any modified versions of this code.
 
    See the file readme.txt for details of compiling and running the model.
 
-   %%% © M. S. Arefeen Zilany (msazilany@gmail.com), Ian C. Bruce
+   %%% ï¿½ M. S. Arefeen Zilany (msazilany@gmail.com), Ian C. Bruce
   (ibruce@ieee.org), Rasha A. Ibrahim, Paul C. Nelson, and Laurel H. Carney -
   November 2013 %%%
 */
@@ -225,8 +225,6 @@ void IHCAN(double *px, double cf, int nrep, double tdres, int totalstim,
 		tmptauc1 = NLafterohc(ohcout,bmTaumin[0],bmTaumax[0],ohcasym); /* nonlinear function after OHC low-pass filter */
 		tauc1    = cohc*(tmptauc1-bmTaumin[0])+bmTaumin[0];  /* time -constant for the signal-path C1 filter */
 		rsigma   = 1/tauc1-1/bmTaumax[0]; /* shift of the location of poles of the C1 filter from the initial positions */
-
-		if (1/tauc1<0.0) mexErrMsgTxt("The poles are in the right-half plane; system is unstable.\n");
 
 		tauwb = TauWBMax+(tauc1-bmTaumax[0])*(TauWBMax-TauWBMin)/(bmTaumax[0]-bmTaumin[0]);
 
@@ -419,8 +417,6 @@ double C1ChirpFilt(double x, double tdres,double cf, int n, double taumax, doubl
 	
 	p[1].x = -sigma0 - rsigma;
 
-	if (p[1].x>0.0) mexErrMsgTxt("The system becomes unstable.\n");
-	
 	p[1].y = ipw;
 
 	p[5].x = p[1].x - rpa; p[5].y = p[1].y - ipb;
@@ -441,8 +437,6 @@ double C1ChirpFilt(double x, double tdres,double cf, int n, double taumax, doubl
 
 	rzero = -CF/tan((C1initphase-phase)/order_of_zero);
 
-    if (rzero>0.0) mexErrMsgTxt("The zeros are in the right-half plane.\n");
-	 
    /*%==================================================  */
 	/*each loop below is for a pair of poles and one zero */
    /*%      time loop begins here                         */
@@ -564,8 +558,6 @@ double C2ChirpFilt(double xx, double tdres,double cf, int n, double taumax, doub
     
 	p[1].x = -sigma0*fcohc;
 
-	if (p[1].x>0.0) mexErrMsgTxt("The system becomes unstable.\n");
-	
 	p[1].y = ipw;
 
 	p[5].x = p[1].x - rpa; p[5].y = p[1].y - ipb;
@@ -585,7 +577,6 @@ double C2ChirpFilt(double xx, double tdres,double cf, int n, double taumax, doub
 	};
 
 	rzero = -CF/tan((C2initphase-phase)/order_of_zero);	
-    if (rzero>0.0) mexErrMsgTxt("The zeros are in the right-hand plane.\n");
    /*%==================================================  */
    /*%      time loop begins here                         */
    /*%==================================================  */
