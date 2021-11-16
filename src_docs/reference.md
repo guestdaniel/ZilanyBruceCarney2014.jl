@@ -24,7 +24,9 @@ Below, you can see each of the wrappers documented below, but you can also head 
 ```@docs
 sim_ihc_zbc2014
 sim_synapse_zbc2014
+sim_anrate_zbc2014
 sim_an_zbc2014
+sim_an_hcc2001
 ```
 
 ## Bindings

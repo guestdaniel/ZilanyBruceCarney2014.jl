@@ -1,6 +1,7 @@
 # Examples
 
 The best way to learn to use the package is to build from examples.
+Below, several example visualizations and shown using the [Plots.jl](https://github.com/JuliaPlots/Plots.jl) package.
 
 ```@meta
 CurrentModule = AuditoryNerveFiber
@@ -8,13 +9,11 @@ CurrentModule = AuditoryNerveFiber
 ## Pure-tone response from one ANF
 
 Simulating responses from a single auditory-nerve fiber is easy.
-The first element returned from [`sim_an_zbc2014`](@ref) is the analytic firing rate approximation, so we can pass a pure-tone stimulus through [`sim_ihc_zbc2014`](@ref) to [`sim_an_zbc2014`](@ref) and then extract the first element to get the instantaneous firing rate of the auditory nerve responding to the pure tone.
+[`sim_anrate_zbc2014`](@ref) returns the instantaneous firing rate response, so we can pass a pure-tone stimulus through [`sim_ihc_zbc2014`](@ref) to [`sim_an_zbc2014`](@ref) and then extract the first element to get the instantaneous firing rate of the auditory nerve responding to the pure tone.
 
 ```@example
 using AuditoryNerveFiber
-const ANF = AuditoryNerveFiber
 using AuditorySignalUtils
-const ASU = AuditorySignalUtils
 using Plots
 
 # Define variables
@@ -23,12 +22,19 @@ phase = 0.0     # starting phase, rads
 dur = 0.2       # duration, seconds
 fs = 10e4       # sampling rate, Hz
 level = 50.0    # level, dB SPL
+t = 0:(1/fs):prevfloat(dur)  # time axis
 
 # Synthesize a pure tone
-x = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
+x = scale_dbspl(pure_tone(freq, phase, dur, fs), level);
+
 # Simulate response 
-y = ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(x, freq), freq)[1];
-plot(y[1:2000], ylabel="Firing rate (sp/s)", xlabel="Samples")
+y = sim_an_zbc2014(sim_ihc_zbc2014(x, freq), freq)[1];
+plot(
+    t[1:2000], y[1:2000]; 
+    ylabel="Firing rate (sp/s)", 
+    xlabel="Time (s)", 
+    label=:none
+)
 ```
 
 ## Iso-level tuning curve
@@ -39,28 +45,35 @@ Then, we use `map` to simulate an average response at several pure-tone frequenc
 
 ```@example
 using AuditoryNerveFiber
-const ANF = AuditoryNerveFiber
 using AuditorySignalUtils
-const ASU = AuditorySignalUtils
 using Plots
 using Statistics
 
 # Define variables
 cf = 1000.0     # CF, Hz
 phase = 0.0     # starting phase, rads
-dur = 0.2       # duration, seconds
-fs = 10e4       # sampling rate, Hz
+dur = 0.1       # duration, seconds
+fs = 100e3      # sampling rate, Hz
 level = 50.0    # level, dB SPL
 
 # Define a function to synthesize a pure tone
-pure_tone(freq) = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
+stim(freq) = scale_dbspl(pure_tone(freq, phase, dur, fs), level);
+
 # Define a function to simulate a single response
-anf_response(x) = ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(x, cf), cf)[1];
+resp(x) = sim_anrate_zbc2014(sim_ihc_zbc2014(x, cf), cf);
+
 # Generate a log-spaced frequency axis
-freqs = ASU.LogRange(200.0, 20000.0, 50)
+freqs = LogRange(200.0, 20000.0, 100)
+
 # Synthesize tone and simulate response at each freq
-results = map(freq -> mean(anf_response(pure_tone(freq))), freqs)
-plot(freqs, results, ylabel="Firing rate (sp/s)", xlabel="Frequency (Hz)", xscale=:log)
+results = map(freq -> mean(resp(stim(freq))), freqs)
+plot(
+    freqs, results; 
+    ylabel="Firing rate (sp/s)", 
+    xlabel="Frequency (Hz)", 
+    xscale=:log10, 
+    label=:none
+)
 ```
 
 ## Generating spike trains
@@ -69,13 +82,11 @@ plot(freqs, results, ylabel="Firing rate (sp/s)", xlabel="Frequency (Hz)", xscal
 The first is an analytic approximation of the underlying instantaneous firing rate.
 The second is an analytic approximation of the variance of the underlying instantaneous variance.
 The third is a spike train. 
-Here, we can see how to extract and analyze each of these outputs.
+Here, we can see how to extract and analyze these outputs.
 
 ```@example
 using AuditoryNerveFiber
-const ANF = AuditoryNerveFiber
 using AuditorySignalUtils
-const ASU = AuditorySignalUtils
 using Plots
 
 # Define variables
@@ -84,17 +95,31 @@ phase = 0.0     # starting phase, rads
 dur = 0.2       # duration, seconds
 fs = 10e4       # sampling rate, Hz
 level = 50.0    # level, dB SPL
+t = 0:(1/fs):prevfloat(dur)  # time axis
 
 # Synthesize a pure tone
-x = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
+x = scale_dbspl(pure_tone(freq, phase, dur, fs), level);
+
 # Simulate response 
-(mean, var, spikes) = ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(x, freq), freq);
+(rate, var, spikes) = sim_an_zbc2014(sim_ihc_zbc2014(x, freq), freq);
 
 # Plot
 l = @layout [a ; b]
-p1 = plot(mean, ylabel="Firing rate (sp/s)", xlabel="Samples")
-p2 = plot(spikes, ylabel="Firing rate (sp/s)", xlabel="Samples")
-plot(p1, p2, layout=l)
+p1 = plot(
+    t, rate; 
+    ylabel="Firing rate (sp/s)", 
+    label=:none,
+)
+p2 = plot(
+    t, spikes; 
+    ylabel="Firing rate (sp/s)", 
+    label=:none,
+)
+plot(
+    p1, p2; 
+    layout=l,
+    xlabel="Time (s)",
+)
 ```
 
 The top row shows the analytic firing rate.
@@ -102,104 +127,91 @@ The bottom row shows a single example spike train.
 
 ## Extending functions with multiple dispatch
 
-The available interface may not always satisfy your needs.
-For example, you may need to simulate responses at several CFs but the default method for [`sim_ihc_zbc2014`](@ref) is only defined for a scalar CF parameter.
-With Julia's multiple dispatch system, you can readily define your own extensions to the methods provided by AuditoryNerveFiber.jl.
-Rather than define methods for common use cases in this package, we defer to the user or packages that extend this package to define methods that suit their needs (i.e., this package is merely a thin implementation of underlying models and not a modeling toolbox). 
+Via a set of [macros](https://docs.julialang.org/en/v1/manual/metaprogramming/) defined in `src/AuditoryNerveFiber.jl`, most functions provided by AuditoryNerveFiber have methods to handle a range of input types.
+The base functions, such as [`sim_ihc_zbc2014`](@ref) are defined in terms of a single vector input and a single scalar characteristic frequency.
+However, [multiple dispatch](https://docs.julialang.org/en/v1/manual/methods/) means that the same function can be defined multiple times for different combinations of input types. 
+Each of these different definitions is called a "method" in Julia.
+You can inspect the methods of `sim_ihc_zbc2014` with the `methods` function, and you will see that several methods are defined.
+Documentation of these methods is pending, but the options should be fairly intuitive
+- Vector input + scalar CF => Vector output
+- Vector input + vector CF => Matrix output
+- Matrix input + vector CF => Matrix output (one CF per row of matrix)
+
+This makes it easy to compose inner hair cell and auditory nerve stages flexibly. 
+For example, if we want to generate the response to a single acoustic input at multiple CFs, we can pass a vector input and a vector of CFs. 
+This is shown in the neurogram demo below.
+
+### Plotting neurograms
 
 ```@example
 using AuditoryNerveFiber
-const ANF = AuditoryNerveFiber
 using AuditorySignalUtils
-const ASU = AuditorySignalUtils
 using Plots
-
-# Define extension to vector-valued CF parameters
-function ANF.sim_ihc_zbc2014(input::Array{Float64, 1}, cf::Array{Float64, 1})
-    map(_cf -> ANF.sim_ihc_zbc2014(input, _cf), cf)
-end
 
 # Define variables
 freq = 1000.0   # freq, Hz
-cfs = [500.0, 1000.0, 1500.0]  # CFs, Hz
 phase = 0.0     # starting phase, rads
 dur = 0.2       # duration, seconds
-fs = 10e4       # sampling rate, Hz
+fs = 100e3       # sampling rate, Hz
 level = 50.0    # level, dB SPL
+t = 0:(1/fs):prevfloat(dur)  # time axis, s
+cfs = LogRange(200.0, 20000.0, 100)  # CFs, Hz
 
-# Define a function to synthesize a pure tone
-pure_tone = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
+# Synthesize a pure tone
+x = scale_dbspl(pure_tone(freq, phase, dur, fs), level);
+
 # Simulate IHC response at several CFs
-results = ANF.sim_ihc_zbc2014(pure_tone, cfs; species="human")
-plot([result[1:1000] for result in results], layout=3, labels="CF = " .* string.(hcat(cfs...)))
-```
-
-## Plotting neurograms
-
-Neurograms are likewise easy to generate, so long as we organize the simulations correctly.
-Here, we extend [`sim_an_zbc2014`](@ref) in a similar way as above.
-
-```@example
-using AuditoryNerveFiber
-const ANF = AuditoryNerveFiber
-using AuditorySignalUtils
-const ASU = AuditorySignalUtils
-using Plots
-
-# Define extension to vector-valued CF parameters
-function ANF.sim_an_zbc2014(input::Array{Float64, 1}, cf::Array{Float64, 1})
-    map(_cf -> ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(input, _cf), _cf)[1], cf)
-end
-
-# Define variables
-freq = 1000.0   # freq, Hz
-cfs = collect(ASU.LogRange(200.0, 20000.0, 100))  # CFs, Hz
-phase = 0.0     # starting phase, rads
-dur = 0.2       # duration, seconds
-fs = 10e4       # sampling rate, Hz
-level = 50.0    # level, dB SPL
-
-# Define a function to synthesize a pure tone
-pure_tone = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
-# Simulate IHC response at several CFs
-results = ANF.sim_an_zbc2014(pure_tone, cfs)
+results = sim_anrate_zbc2014(sim_ihc_zbc2014(x, cfs), cfs)
 
 # Plot
-heatmap(transpose(hcat(results...))[:, 1:3000], xlabel="Samples", ylabel="CF (#)")
+heatmap(
+    t[1:3000], cfs, results[:, 1:3000]; 
+    xlabel="Time (s)", 
+    ylabel="CF (Hz)",
+    yscale=:log10,
+)
 ```
 
 ## Simulating hearing loss
 
-We can extend our neurogram simulation to simulate what happens in the case of broad loss of
-outer hair cells by passing a new value to the `cohc` parameter in [`sim_ihc_zbc2014`](@ref).
+We can extend our neurogram simulation above to simulate what happens in the case of broad loss of outer hair cells by passing a new value to the `cohc` parameter in [`sim_ihc_zbc2014`](@ref).
+We'll do something even a bit fancier --- by wrapping the entire routine in a function, we can easily repeat the simulation for various levels of `cohc` and compare them side-by-side.
 
 ```@example
 using AuditoryNerveFiber
-const ANF = AuditoryNerveFiber
 using AuditorySignalUtils
-const ASU = AuditorySignalUtils
 using Plots
 
-# Define extension to vector-valued CF parameters
-function ANF.sim_an_zbc2014(input::Array{Float64, 1}, cf::Array{Float64, 1}; cohc=1.0)
-    map(_cf -> ANF.sim_an_zbc2014(ANF.sim_ihc_zbc2014(input, _cf; cohc=cohc), _cf)[1], cf)
+function viz_hearing_loss(cohc)
+    # Define variables
+    freq = 1000.0   # freq, Hz
+    phase = 0.0     # starting phase, rads
+    dur = 0.2       # duration, seconds
+    fs = 100e3       # sampling rate, Hz
+    level = 50.0    # level, dB SPL
+    t = 0:(1/fs):prevfloat(dur)  # time axis, s
+    cfs = LogRange(200.0, 20000.0, 100)  # CFs, Hz
+
+    # Synthesize a pure tone
+    x = scale_dbspl(pure_tone(freq, phase, dur, fs), level);
+
+    # Simulate IHC response at several CFs
+    results = sim_anrate_zbc2014(sim_ihc_zbc2014(x, cfs; cohc=cohc), cfs)  # here we pass cohc to sim_ihc_zbc2014
+
+    # Plot
+    heatmap(
+        t[1:3000], cfs, results[:, 1:3000]; 
+        xlabel="Time (s)", 
+        ylabel="CF (Hz)",
+        yscale=:log10,
+        clim=(0, 1000),
+        title="OHC loss = $((1-cohc)*100)%",
+    )
 end
 
-# Define variables
-freq = 1000.0   # freq, Hz
-cfs = collect(ASU.LogRange(200.0, 20000.0, 100))  # CFs, Hz
-phase = 0.0     # starting phase, rads
-dur = 0.2       # duration, seconds
-fs = 10e4       # sampling rate, Hz
-level = 50.0    # level, dB SPL
-
-# Define a function to synthesize a pure tone
-pure_tone = ASU.scale_dbspl(ASU.pure_tone(freq, phase, dur, fs), level);
-# Simulate IHC response at several CFs
-results = ANF.sim_an_zbc2014(pure_tone, cfs; cohc=0.25)
-
-# Plot
-heatmap(transpose(hcat(results...))[:, 1:3000], xlabel="Samples", ylabel="CF (#)")
+# Run function and plot results
+plots = map(viz_hearing_loss, [1.0, 0.5, 0.1, 0.01])
+plot(plots...; layout=(4, 1), size=(500, 300*4))
 ```
 
-As can be seen, with 75% OHC loss the response is less sharply tuned. 
+As can be seen, with significant OHC loss the response becomes weaker over all (in terms of average firing rate) and becomes more broadly tuned.
