@@ -1,7 +1,7 @@
 name = "AuditoryNerveFiber"
 uuid = "83795400-82fe-439b-8fdc-4e65948642a8"
 authors = ["Daniel Guest <guestusut@gmail.com>"]
-version = "1.0.0"
+version = "0.2.0"
 
 [deps]
 AuditorySignalUtils = "20759599-9703-4078-b9af-37a489742e5c"
