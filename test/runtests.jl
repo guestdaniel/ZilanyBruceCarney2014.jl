@@ -206,7 +206,6 @@ end
     sim_ihc_zbc2014, 
     sim_synapse_zbc2014, 
     sim_anrate_zbc2014,
-    sim_an_hcc2001
 ] 
     # // Dispatch over array of inputs
     # Check that if we simulate a pure-tone response from a 1d input, or the same pure-tone
