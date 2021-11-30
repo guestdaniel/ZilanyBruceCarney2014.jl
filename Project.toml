@@ -4,7 +4,6 @@ authors = ["Daniel Guest <guestusut@gmail.com>"]
 version = "1.0.0"
 
 [deps]
-AuditoryFilters = "2b6db37a-05bd-5fbd-94f7-97a8281041e3"
 AuditorySignalUtils = "20759599-9703-4078-b9af-37a489742e5c"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 BinaryBuilder = "12aac903-9f7c-5d81-afc2-d9565ea332ae"
