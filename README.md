@@ -1,7 +1,7 @@
 # AuditoryNerveFiber.jl
 
 AuditoryNerveFiber.jl is a Julia package that provides access to auditory-nerve models in Julia. 
-Most implementations of auditory-nerve models in the literature are written in C or MATLAB, or a mixutre of the two.
+Most implementations of auditory-nerve models in the literature are written in C or MATLAB, or a mixture of the two.
 This package provides access these models in Julia using a consistent interface so that users can model easily in Julia without worrying about the details of implementation for each model or knowing the native language of each model.
 
 ## Why a new package? Why Julia?
@@ -19,10 +19,6 @@ Presently, AuditoryNerveFiber.jl provides access to:
 expanded simulation options for a model of the auditory periphery. The Journal
 of the Acoustical Society of America, 135(1), 283–286.
 http://dx.doi.org/10.1121/1.4837815
-- Heinz, M. G., Colburn, H. S., & Carney, L. H. (2001). Evaluating auditory
-  performance limits: I. One-parameter discrimination using a computational
-  model for the auditory nerve. Neural Computation, 13, 2273–2316.
-  http://dx.doi.org/10.1162/089976601750541804
 
 More models to come soon!
 
