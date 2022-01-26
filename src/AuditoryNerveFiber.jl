@@ -4,7 +4,7 @@ using DSP
 using FFTW
 using libzbc2014_jll
 
-export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014
+export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014, sim_bm_zbc2014
 
 
 """
@@ -13,7 +13,7 @@ export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014
 Generates random n numbers like MATLAB's rand or Python's numpy.random.rand. 
 
 Note that this function returns a pointer instead of a Julia array as we expect that it will
-be called from C and not Julia.
+be called from C and not Julia. 
 """
 function random_numbers(n::Int32)
     return pointer(rand(Float64, n))
@@ -227,6 +227,45 @@ end
 
 
 """
+    sim_bm_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="human", n_rep=1)
+
+Simulates basilar membrane vibration for given acoustic input.
+
+# Arguments
+- `input::Vector{Float64}`: sound pressure waveform in pascals
+- `cf::Float64`: characteristic frequency of the IHC in Hz
+- `fs::Float64`: sampling rate in Hz
+- `cohc::Float64`: outer hair cell survival (from 0 to 1)
+- `cihc::Float64`: inner hair cell survival (from 0 to 1)
+- `species::String`: species, either ("cat" = cat, "human" = humans with Shera tuning, "human_glasberg" = humans with Glasberg tuning)
+- `n_rep::Int64`: how many repeats of the input to return
+
+# Returns
+- `output::Vector{Float64}`: basilar membrane output
+"""
+function sim_bm_zbc2014(
+    input::Vector{Float64}, 
+    cf::Float64; 
+    fs::Float64=10e4,
+    cohc::Float64=1.0, 
+    cihc::Float64=1.0, 
+    species::String="human",
+    n_rep::Int64=1
+)
+    # Map species string to species integer expected by IHCAN!
+    species_flag = Dict([("cat", 1), ("human", 2), ("human_glasberg", 3)])[species]
+    # Create empty array for output
+    output_ihc = zeros((length(input)*n_rep, ))
+    output_bm = zeros((length(input)*n_rep, ))
+    # Make call
+    BM!(input, cf, Int32(n_rep), 1/fs, Int32(length(input)), cohc, cihc, Int32(species_flag), output_ihc, output_bm)
+    # Return
+    return output_bm
+end
+
+
+
+"""
     sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="human", n_rep=1)
 
 Simulates inner hair cell potential for given acoustic input.
@@ -414,6 +453,61 @@ end
 @dispatch_vectorized_input_and_cfs(sim_anrate_zbc2014)
 @dispatch_matrix_input(sim_anrate_zbc2014)
 @dispatch_vector_of_matrix_input(sim_anrate_zbc2014)
+
+
+"""
+    BM!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, bmout)
+
+Direct binding to BM C function in model_IHC.c
+
+Passes arguments directly to BM using ccall. Arrays are converted to pointers, 
+functions are converted to pointers, and all other types are converted directly to 
+corresponding types in C. Note that while there are type checks enforced automatically by 
+Julia, there are no sanity checks on any arguments.
+
+# Arguments
+- `px::Vector{Float64}`: sound pressure waveform in pascals
+- `cf::Float64`: characteristic frequency of the fiber in Hz
+- `nrep::Int32`: number of repetitions to simulate. Note that for the IHC simulation, one "true" simulation is conducted and then that simulation is copied and tiled (because there is no randomness in the IHC simulation) to simulate multiple times.
+- `tdres::Float64`: time-domain resolution (i.e., reciprocal of sampling rate)
+- `totalstim::Int32`: number of samples in simulation
+- `cohc::Float64`: outer hair cell survival (from 0 to 1)
+- `cihc::Float64`: inner hair cell survival (from 0 to 1)
+- `species::Int32`: species, either (1 = cat, 2 = humans with Shera tuning, 3 = humans with Glasberg tuning)
+- `ihcout::Vector{Float64}`: array of same size as `px`, used to store IHC output from C
+- `bmout::Vector{Float64}`: array of same size as `px`, used to store BM output from C
+"""
+function BM!(
+    px::Vector{Float64}, 
+    cf::Float64, 
+    nrep::Int32, 
+    tdres::Float64,
+    totalstim::Int32, 
+    cohc::Float64, 
+    cihc::Float64, 
+    species::Int32,
+    ihcout::Vector{Float64},
+    bmout::Vector{Float64},
+)
+    ccall(
+            (:IHCAN, libzbc2014),    # function call
+            Cvoid,                   # return type
+            (                        # arg types
+                Ptr{Cdouble},        # px
+                Cdouble,             # cf
+                Cint,                # nrep
+                Cdouble,             # tdres
+                Cint,                # totalstim
+                Cdouble,             # cohc
+                Cdouble,             # cihc
+                Cint,                # species
+                Ptr{Cdouble},        # ihcout
+                Ptr{Cdouble},        # bmout
+            ),
+            px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, bmout  # pass arguments
+        )
+end
+
 
 
 """

@@ -47,6 +47,22 @@ end
 
 # Start by testing the direct bindings and just make sure that they run!
 @testset "C bindings: check callable" begin
+  # First, we try testing the direct C binding to the BM code (IHCAN!)
+  @test begin
+      px = pt
+      cf = freq
+      nrep = Int32(1)
+      tdres = 1.0/fs
+      totalstim = Int32(dur*fs)
+      cohc = 1.0
+      cihc = 1.0
+      species = Int32(1)
+      ihcout = Vector{Cdouble}(zeros((Int64(dur*fs), )))
+      bmout = Vector{Cdouble}(zeros((Int64(dur*fs), )))
+      AuditoryNerveFiber.BM!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, bmout)
+      true
+  end
+
   # First, we try testing the direct C binding to the IHC code (IHCAN!)
   @test begin
       px = pt
