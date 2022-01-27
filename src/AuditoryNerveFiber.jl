@@ -4,7 +4,7 @@ using DSP
 using FFTW
 using libzbc2014_jll
 
-export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014, sim_bm_zbc2014
+export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014, sim_bm_zbc2014, sim_spikes_zbc2014
 
 
 """
@@ -407,6 +407,60 @@ function sim_an_zbc2014(
               meanrate, varrate, psth)
     return (meanrate, varrate, psth)
 end
+
+
+"""
+    sim_spikes_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, power_law="approximate", fractional=false, n_rep=1)
+
+Simulates auditory nerve output (spikes only) for a given inner hair cell input
+
+# Arguments
+- `input::Vector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
+- `cf::Float64`: characteristic frequency of the fiber in Hz
+- `fs::Float64`: sampling rate of the *input* in Hz
+- `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
+- `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
+- `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
+- `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
+- `n_rep::Int64`: number of repetititons to run
+
+# Returns
+- `psth::Vector{Float64}`: peri-stimulus time histogram 
+
+# Warnings
+- n_rep is not tested and it's not clear that it's producing the right output behavior. If you intend to use the n_rep argument for anything other than n_rep > 1, examine your outputs carefully and report any bugs to GitHub
+"""
+function sim_spikes_zbc2014(
+    input::Vector{Float64}, 
+    cf::Float64; 
+    fs::Float64=10e4,
+    fiber_type::String="high", 
+    power_law::String="approximate",
+    fractional::Bool=false, 
+    n_rep::Int64=1
+)
+    # Map fiber type string to float code expected by Synapse!
+    fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
+    # Map power-law implementation type to float code expected by Syanpse!
+    implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[power_law]
+    # Map fractional to float code expected by Syanpse!
+    noiseType = Dict([(true, 1.0), (false, 0.0)])[fractional]
+    # Create empty array for output
+    meanrate = zeros((length(input), ))
+    varrate = zeros((length(input), ))
+    psth = zeros((length(input), ))
+    # Make call
+    SingleAN!(input, cf, Int32(n_rep), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, 
+              meanrate, varrate, psth)
+    return psth
+end
+
+@dispatch_vectorized_input(sim_spikes_zbc2014)
+@dispatch_vectorized_cfs(sim_spikes_zbc2014)
+@dispatch_vectorized_input_and_cfs(sim_spikes_zbc2014)
+@dispatch_matrix_input(sim_spikes_zbc2014)
+@dispatch_vector_of_matrix_input(sim_spikes_zbc2014)
+
 
 
 """
