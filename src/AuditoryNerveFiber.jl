@@ -490,7 +490,7 @@ function BM!(
     bmout::Vector{Float64},
 )
     ccall(
-            (:IHCAN, libzbc2014),    # function call
+            (:BM, libzbc2014),       # function call
             Cvoid,                   # return type
             (                        # arg types
                 Ptr{Cdouble},        # px

@@ -47,7 +47,7 @@ end
 
 # Start by testing the direct bindings and just make sure that they run!
 @testset "C bindings: check callable" begin
-  # First, we try testing the direct C binding to the BM code (IHCAN!)
+  # First, we try testing the direct C binding to the BM code (BM!)
   @test begin
       px = pt
       cf = freq

@@ -5,10 +5,9 @@
   nerve model available at
   https://www.urmc.rochester.edu/labs/carney/publications-code/auditory-models.aspx.
 
-  Some formatting changes were made to the code to improve readability. This was
-  exclusively performed in the functions that have direct Julia bindings (IHCAN,
-  Synapse, and SingleAN). The Julia test suite available in Hearing.jl can
-  verify that these formatting changes did not affect any of the code.
+  Some formatting changes were made to the code to improve readability.
+
+  Some functions were marginally modified ...
 
   The only changes to the logic of the code were to handle function pointers
   from Julia as arguments where necessary and to strip out any code specific
