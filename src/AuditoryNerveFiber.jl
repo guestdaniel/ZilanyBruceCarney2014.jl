@@ -199,11 +199,12 @@ Macro that defines a method for model functions dispatched over a matrix inputs 
 macro dispatch_matrix_input(func)
     :( 
     function $func(input::AbstractMatrix{Float64}, cf::Vector{Float64}; kwargs...) 
-        output = zeros(size(input))
+        n_cf = size(input)[1]
+        output = Vector{Vector{Float64}}()
         for row in 1:size(input)[1]
-            output[row, :] = $func(input[row, :], cf[row]; kwargs...)
+            push!(output, $func(input[row, :], cf[row]; kwargs...))
         end
-        return output 
+        return permutedims(hcat(output...))
     end
     )
 end
@@ -303,7 +304,7 @@ end
 @dispatch_vectorized_cfs(sim_ihc_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_ihc_zbc2014)
 @dispatch_matrix_input(sim_ihc_zbc2014)
-@dispatch_vector_of_matrix_input(sim_ihc_zbc2014)
+#@dispatch_vector_of_matrix_input(sim_ihc_zbc2014)
 
 
 """
@@ -352,7 +353,7 @@ end
 @dispatch_vectorized_cfs(sim_synapse_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_synapse_zbc2014)
 @dispatch_matrix_input(sim_synapse_zbc2014)
-@dispatch_vector_of_matrix_input(sim_synapse_zbc2014)
+#@dispatch_vector_of_matrix_input(sim_synapse_zbc2014)
 
 
 """
@@ -446,8 +447,7 @@ end
 @dispatch_vectorized_cfs(sim_spikes_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_spikes_zbc2014)
 @dispatch_matrix_input(sim_spikes_zbc2014)
-@dispatch_vector_of_matrix_input(sim_spikes_zbc2014)
-
+#@dispatch_vector_of_matrix_input(sim_spikes_zbc2014)
 
 
 """
@@ -484,7 +484,7 @@ end
 @dispatch_vectorized_cfs(sim_anrate_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_anrate_zbc2014)
 @dispatch_matrix_input(sim_anrate_zbc2014)
-@dispatch_vector_of_matrix_input(sim_anrate_zbc2014)
+#@dispatch_vector_of_matrix_input(sim_anrate_zbc2014)
 
 
 """
