@@ -262,7 +262,7 @@ end
     @test begin
         output_1 = model_stage(pt, 500.0)
         output_2 = model_stage(pt.*2, 1500.0)
-        output_test = model_stage(transpose([pt pt.*2]), [500.0, 1500.0])
+        output_test = model_stage(permutedims([pt pt.*2]), [500.0, 1500.0])
 
         test_1 = all(output_1 .== output_test[1, :])
         test_2 = all(output_2 .== output_test[2, :])
@@ -270,20 +270,20 @@ end
         test_1 && test_2
     end
     # // Dispatch over vector of matrix input and vector of CFs
-    @test begin
-        output_1 = model_stage(pt, 500.0)
-        output_2 = model_stage(pt.*2, 1500.0)
-        output_3 = model_stage(pt.*3, 500.0)
-        output_4 = model_stage(pt.*4, 1500.0)
-        output_test = model_stage([transpose([pt pt.*2]), transpose([pt.*3 pt.*4])], [500.0, 1500.0])
+    # @test begin
+    #     output_1 = model_stage(pt, 500.0)
+    #     output_2 = model_stage(pt.*2, 1500.0)
+    #     output_3 = model_stage(pt.*3, 500.0)
+    #     output_4 = model_stage(pt.*4, 1500.0)
+    #     output_test = model_stage([transpose([pt pt.*2]), transpose([pt.*3 pt.*4])], [500.0, 1500.0])
 
-        test_1 = all(output_1 .== output_test[1][1, :])
-        test_2 = all(output_2 .== output_test[1][2, :])
-        test_3 = all(output_3 .== output_test[2][1, :])
-        test_4 = all(output_4 .== output_test[2][2, :])
+    #     test_1 = all(output_1 .== output_test[1][1, :])
+    #     test_2 = all(output_2 .== output_test[1][2, :])
+    #     test_3 = all(output_3 .== output_test[2][1, :])
+    #     test_4 = all(output_4 .== output_test[2][2, :])
 
-        test_1 && test_2 && test_3 && test_4
-    end
+    #     test_1 && test_2 && test_3 && test_4
+    # end
 end
 
 # Next we test that n_rep is handled appropriately
