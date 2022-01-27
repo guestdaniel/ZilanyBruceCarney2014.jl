@@ -284,6 +284,49 @@ end
 
         test_1 && test_2 && test_3 && test_4
     end
+end
 
+# Next we test that n_rep is handled appropriately
+@testset "Wrappers: check n_rep handling" begin
+
+    # Verify that sim_ihc_zbc2014 handles varying n_rep and returns correct lengths
+    @test begin
+        results = map(1:5:100) do n_rep
+            return length(sim_ihc_zbc2014(pt, 1000.0; n_rep=n_rep)) == (length(pt) * n_rep)
+        end
+        all(results)
+    end
+
+    # Verify that sim_synapse_zbc2014 handles varying n_rep and returns correct lengths
+    @test begin
+        results = map(1:5:100) do n_rep
+            return length(sim_synapse_zbc2014(sim_ihc_zbc2014(pt, 1000.0; n_rep=n_rep), 1000.0; n_rep=n_rep)) == (length(pt) * n_rep)
+        end
+        all(results)
+    end
+
+    # Verify that sim_an_zbc2014 handles varying n_rep and returns correct lengths
+    @test begin
+        results = map(1:5:100) do n_rep
+            return length(sim_an_zbc2014(sim_ihc_zbc2014(pt, 1000.0; n_rep=n_rep), 1000.0; n_rep=n_rep)[1]) == (length(pt))
+        end
+        all(results)
+    end
+
+    # Verify that sim_anrate_zbc2014 handles varying n_rep and returns correct lengths
+    @test begin
+        results = map(1:5:100) do n_rep
+            return length(sim_anrate_zbc2014(sim_ihc_zbc2014(pt, 1000.0; n_rep=n_rep), 1000.0; n_rep=n_rep)) == (length(pt))
+        end
+        all(results)
+    end
+
+    # Verify that sim_spikes_zbc2014 handles varying n_rep and returns correct lengths
+    @test begin
+        results = map(1:5:100) do n_rep
+            return length(sim_spikes_zbc2014(sim_ihc_zbc2014(pt, 1000.0; n_rep=n_rep), 1000.0; n_rep=n_rep)) == (length(pt))
+        end
+        all(results)
+    end
 
 end
