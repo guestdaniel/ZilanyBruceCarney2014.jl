@@ -275,15 +275,11 @@ Simulates inner hair cell potential for given acoustic input.
 - `fs::Float64`: sampling rate in Hz
 - `cohc::Float64`: outer hair cell survival (from 0 to 1)
 - `cihc::Float64`: inner hair cell survival (from 0 to 1)
-<<<<<<< HEAD
-- `species::String`: species, either "cat", "human" (Shera tuning), or "human_glasberg" (Glasberg tuning)
-=======
 - `species::String`: species, either ("cat" = cat, "human" = humans with Shera tuning, "human_glasberg" = humans with Glasberg tuning)
-- `n_rep::Int64`: how many repetitions to perform. Because the inner hair cell stage has no randomness, n_rep > 1 simply concatenates n_rep copies of IHC simulation and returns 
->>>>>>> main
+- `n_rep::Int64`: how many repetitions to perform. Because the inner hair cell stage has no randomness, `n_rep` > 1 simply concatenates `n_rep` copies of IHC simulation and returns 
 
 # Returns
-- `output::Vector{Float64}`: inner hair cell potential output, size of length(input)*n_rep
+- `output::Vector{Float64}`: inner hair cell potential output, size of `length(input)*n_rep`
 """
 function sim_ihc_zbc2014(
     input::Vector{Float64}, 
@@ -324,10 +320,10 @@ Simulates synapse output for a given inner hair cell input
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
 - `fractional::Bool`: whether we use ffGn or not, one of (true, false)
-- `n_rep::Int64`: number of repetititons to run. We assume that the input was also generated using n_rep=n_rep, hence we infer that the input acoustic waveform is of length length(input)/n_rep.
+- `n_rep::Int64`: number of repetititons to run. We assume that the input was also generated using `n_rep=n_rep`, hence we infer that the input acoustic waveform is of length `length(input)/n_rep`.
 
 # Returns
-- `output::Vector{Float64}`: synapse output (unknown units?), length is length(input)*n_rep
+- `output::Vector{Float64}`: synapse output (unknown units?), length is `length(input)`
 """
 function sim_synapse_zbc2014(
     input::Vector{Float64}, 
@@ -373,19 +369,20 @@ Simulates auditory nerve output (spikes and firing rate) for a given inner hair 
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
 - `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
-- `n_rep::Int64`: number of repetititons to run. We assume that the input was also generated using n_rep=n_rep, hence we infer that the input acoustic waveform is of length length(input)/n_rep.
+- `n_rep::Int64`: number of repetititons to run. We assume that the input was also generated using `n_rep=n_rep`, hence we infer that the input acoustic waveform is of length `length(input)/n_rep`.
 
 # Returns
-- `meanrate::Vector{Float64}`: analytical estimate of instantaneous firing rate, of size length(input)
-- `varrrate::Vector{Float64}`: analytical estimate of instantaneous firing rate variance, of size length(input)
-- `psth::Vector{Float64}`: peri-stimulus time histogram, of size length(input)
+- `meanrate::Vector{Float64}`: analytical estimate of instantaneous firing rate, of size `length(input)/n_rep`
+- `varrrate::Vector{Float64}`: analytical estimate of instantaneous firing rate variance, of size `length(input)/n_rep`
+- `psth::Vector{Float64}`: peri-stimulus time histogram, of size `length(input)/n_rep`
 
 # Notes
-- The behavior of `n_rep` in sim_an_zbc2014 and derived functions differs slightly from 
-sim_synapse_zbc2014. sim_synapse_zbc2014 will return an array of length 
-`length(input) * n_rep`, and will contain a single response to n_rep concatenated copies 
-of the inner hair cell potential (assuming that sim_ihc_zbc2014 was also evaluated using
-n_rep=n_rep). sim_an_zbc2014 will return an array of length `length(input)`. Underneath,
+- The behavior of `n_rep` in `sim_an_zbc2014` and derived functions differs slightly from 
+`sim_synapse_zbc2014`. `sim_synapse_zbc2014` will return an array of length 
+`length(input)`, and will contain a single response to `n_rep` concatenated copies 
+of the inner hair cell potential to a single copy of the underlying acoustic stimulus 
+(assuming that `sim_ihc_zbc2014` was also evaluated using
+`n_rep=n_rep`). `sim_an_zbc2014` will return an array of length `length(input)`. Underneath,
 it generates the same synapse response as `sim_synapse_zbc2014`, but then averages over
 the repetitions and averages the spike train into a peristimulus time histogram (PSTH).  
 """
@@ -433,7 +430,7 @@ Simulates auditory nerve output (spikes only) for a given inner hair cell input
 - `n_rep::Int64`: number of repetititons to run 
 
 # Returns
-- `psth::Vector{Float64}`: peri-stimulus time histogram, size of length(input) (see docs for sim_an_zbc2014 to understand why)
+- `psth::Vector{Float64}`: peri-stimulus time histogram, size of `length(input)/n_rep` (see docs for `sim_an_zbc2014` to understand why)
 """
 function sim_spikes_zbc2014(
     input::Vector{Float64}, 
@@ -470,7 +467,7 @@ Simulates auditory nerve output (instantaneous firing rate) for a given inner ha
 - `n_rep::Int64`: number of repetititons to run 
 
 # Returns
-- `psth::Vector{Float64}`: analytical estimate of instantaneous firing rate, size of length(input) (see docs for sim_an_zbc2014 to understand why)
+- `psth::Vector{Float64}`: analytical estimate of instantaneous firing rate, size of `length(input)` (see docs for `sim_an_zbc2014` to understand why)
 """
 function sim_anrate_zbc2014(
     input::Vector{Float64}, 

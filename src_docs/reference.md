@@ -15,7 +15,7 @@ These are the functions that most users will want to use in their own code.
 Presently, the wrappers provide access to the Zilany, Bruce, and Carney (2014) auditory-nerve model and all share the same basic signature:
 
 ```julia
-func(input, cf; kwargs)
+function_name(input, cf; kwargs...)
 ```
 
 where the input is a 1D array, cf is a characteristic frequency in Hz, and kwargs are various other parameters that have default values (i.e., you can set them if you want to, but if you don't a default value will be used).
@@ -24,9 +24,9 @@ Below, you can see each of the wrappers documented below, but you can also head 
 ```@docs
 sim_ihc_zbc2014
 sim_synapse_zbc2014
-sim_anrate_zbc2014
 sim_an_zbc2014
-sim_an_hcc2001
+sim_anrate_zbc2014
+sim_spikes_zbc2014
 ```
 
 ## Bindings
@@ -40,6 +40,7 @@ Generally, it is expected that end-users will never need to call these functions
 Instead, they should use a wrapper or another higher-level function to access the same functionality in a a more "user-friendly" way.
 
 ```@docs
+BM!
 IHCAN!
 Synapse!
 SingleAN!

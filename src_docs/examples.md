@@ -9,7 +9,7 @@ CurrentModule = AuditoryNerveFiber
 ## Pure-tone response from one ANF
 
 Simulating responses from a single auditory-nerve fiber is easy.
-[`sim_anrate_zbc2014`](@ref) returns the instantaneous firing rate response, so we can pass a pure-tone stimulus through [`sim_ihc_zbc2014`](@ref) to [`sim_an_zbc2014`](@ref) and then extract the first element to get the instantaneous firing rate of the auditory nerve responding to the pure tone.
+[`sim_anrate_zbc2014`](@ref) returns the instantaneous firing rate response, so we can pass a pure-tone stimulus through [`sim_ihc_zbc2014`](@ref) to [`sim_anrate_zbc2014`](@ref) and to get the instantaneous firing rate of the auditory nerve responding to the pure tone.
 
 ```@example
 using AuditoryNerveFiber
@@ -17,11 +17,11 @@ using AuditorySignalUtils
 using Plots
 
 # Define variables
-freq = 1000.0   # frequency and CF, Hz
-phase = 0.0     # starting phase, rads
-dur = 0.2       # duration, seconds
-fs = 10e4       # sampling rate, Hz
-level = 50.0    # level, dB SPL
+freq = 1000.0                # frequency and CF, Hz
+phase = 0.0                  # starting phase, rads
+dur = 0.2                    # duration, seconds
+fs = 100e3                   # sampling rate, Hz
+level = 50.0                 # level, dB SPL
 t = 0:(1/fs):prevfloat(dur)  # time axis
 
 # Synthesize a pure tone
@@ -50,17 +50,18 @@ using Plots
 using Statistics
 
 # Define variables
-cf = 1000.0     # CF, Hz
-phase = 0.0     # starting phase, rads
-dur = 0.1       # duration, seconds
-fs = 100e3      # sampling rate, Hz
-level = 50.0    # level, dB SPL
+cf = 1000.0      # CF, Hz
+phase = 0.0      # starting phase, rads
+dur = 0.1        # duration, seconds
+dur_ramp = 0.01  # duration of ramp, seconds
+fs = 100e3       # sampling rate, Hz
+level = 50.0     # level, dB SPL
 
 # Define a function to synthesize a pure tone
-stim(freq) = scale_dbspl(pure_tone(freq, phase, dur, fs), level);
+stim(freq) = scale_dbspl!(cosine_ramp!(pure_tone(freq, phase, dur, fs), dur_ramp, fs), level);
 
 # Define a function to simulate a single response
-resp(x) = sim_anrate_zbc2014(sim_ihc_zbc2014(x, cf), cf);
+resp(stim) = sim_anrate_zbc2014(sim_ihc_zbc2014(stim, cf), cf);
 
 # Generate a log-spaced frequency axis
 freqs = LogRange(200.0, 20000.0, 100)
@@ -82,7 +83,10 @@ plot(
 The first is an analytic approximation of the underlying instantaneous firing rate.
 The second is an analytic approximation of the variance of the underlying instantaneous variance.
 The third is a spike train. 
-Here, we can see how to extract and analyze these outputs.
+Utility functions are provided to only return one of those outputs, with [`sim_anrate_zbc2014`](@ref) returning the firing rate only and [`sim_spikes_zbc2014`](@ref) returning the spike train only.
+When `n_rep` is greater than 1, [`sim_spikes_zbc2014`] will return a PSTH for `n_rep` sequential presentations of the stimulus.
+
+Here, we can see how to utilize these functions to extract and analyze these outputs.
 
 ```@example
 using AuditoryNerveFiber
@@ -90,15 +94,16 @@ using AuditorySignalUtils
 using Plots
 
 # Define variables
-freq = 1000.0   # frequency and CF, Hz
-phase = 0.0     # starting phase, rads
-dur = 0.2       # duration, seconds
-fs = 10e4       # sampling rate, Hz
-level = 50.0    # level, dB SPL
+freq = 1000.0                # frequency and CF, Hz
+phase = 0.0                  # starting phase, rads
+dur = 0.2                    # duration, seconds
+dur_ramp = 0.01              # ramp duration, seconds
+fs = 10e4                    # sampling rate, Hz
+level = 50.0                 # level, dB SPL
 t = 0:(1/fs):prevfloat(dur)  # time axis
 
 # Synthesize a pure tone
-x = scale_dbspl(pure_tone(freq, phase, dur, fs), level);
+x = scale_dbspl!(cosine_ramp!(pure_tone(freq, phase, dur, fs), dur_ramp, fs), level);
 
 # Simulate response 
 (rate, var, spikes) = sim_an_zbc2014(sim_ihc_zbc2014(x, freq), freq);
@@ -112,7 +117,7 @@ p1 = plot(
 )
 p2 = plot(
     t, spikes; 
-    ylabel="Firing rate (sp/s)", 
+    ylabel="Spike [y/n]", 
     label=:none,
 )
 plot(
@@ -124,6 +129,42 @@ plot(
 
 The top row shows the analytic firing rate.
 The bottom row shows a single example spike train. 
+
+```@example
+using AuditoryNerveFiber
+using AuditorySignalUtils
+using Plots
+
+# Define variables
+freq = 1000.0                # frequency and CF, Hz
+phase = 0.0                  # starting phase, rads
+dur = 0.2                    # duration, seconds
+dur_ramp = 0.01              # ramp duration, seconds
+fs = 10e4                    # sampling rate, Hz
+level = 50.0                 # level, dB SPL
+t = 0:(1/fs):prevfloat(dur)  # time axis
+
+# Synthesize a pure tone
+x = scale_dbspl!(cosine_ramp!(pure_tone(freq, phase, dur, fs), dur_ramp, fs), level);
+
+# Simulate PSTH response at many n_reps
+psths = map(n_rep -> sim_spikes_zbc2014(sim_ihc_zbc2014(x, freq; n_rep=n_rep), freq; n_rep=n_rep), [1, 10, 30, 300])
+
+# Generate plots
+l = @layout [a ; b ; c; d]
+plots = map(psths) do psth
+    plot(
+        t, psth; 
+        ylabel="Spike count", 
+        label=:none,
+    )
+end
+plot(
+    plots...;
+    layout=l,
+    xlabel="Time (s)",
+)
+```
 
 ## Extending functions with multiple dispatch
 
