@@ -1,13 +1,13 @@
 name = "AuditoryNerveFiber"
 uuid = "83795400-82fe-439b-8fdc-4e65948642a8"
-authors = ["Daniel Guest <guestusut@gmail.com>"]
-version = "0.1.0"
+authors = ["Daniel Guest <guest121@gmail.com>"]
+version = "0.2.1"
 
 [deps]
-AuditoryFilters = "2b6db37a-05bd-5fbd-94f7-97a8281041e3"
 AuditorySignalUtils = "20759599-9703-4078-b9af-37a489742e5c"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 BinaryBuilder = "12aac903-9f7c-5d81-afc2-d9565ea332ae"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"

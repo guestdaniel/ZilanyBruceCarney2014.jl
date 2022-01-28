@@ -290,8 +290,8 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
                               tdres * sampFreq);
         indx++)
   {
-    // sout1[k]  = __max( 0, sampIHC[indx] + randNums[indx]- alpha1*I1);
-    sout1[k] = __max(0, sampIHC[indx] - alpha1 * I1); /* No fGn condition */
+    sout1[k]  = __max( 0, sampIHC[indx] + randNums[indx]- alpha1*I1);
+    //sout1[k] = __max(0, sampIHC[indx] - alpha1 * I1); /* No fGn condition */
     sout2[k] = __max(0, sampIHC[indx] - alpha2 * I2);
 
     if (implnt == 1) /* ACTUAL Implementation */

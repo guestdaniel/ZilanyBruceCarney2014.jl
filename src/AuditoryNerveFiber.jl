@@ -2,10 +2,9 @@ module AuditoryNerveFiber
 
 using DSP
 using FFTW
-using AuditoryFilters
 using libzbc2014_jll
 
-export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014, sim_an_hcc2001
+export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014, sim_bm_zbc2014, sim_spikes_zbc2014
 
 
 """
@@ -14,7 +13,7 @@ export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014,
 Generates random n numbers like MATLAB's rand or Python's numpy.random.rand. 
 
 Note that this function returns a pointer instead of a Julia array as we expect that it will
-be called from C and not Julia.
+be called from C and not Julia. 
 """
 function random_numbers(n::Int32)
     return pointer(rand(Float64, n))
@@ -200,11 +199,12 @@ Macro that defines a method for model functions dispatched over a matrix inputs 
 macro dispatch_matrix_input(func)
     :( 
     function $func(input::AbstractMatrix{Float64}, cf::Vector{Float64}; kwargs...) 
-        output = zeros(size(input))
+        n_cf = size(input)[1]
+        output = Vector{Vector{Float64}}()
         for row in 1:size(input)[1]
-            output[row, :] = $func(input[row, :], cf[row]; kwargs...)
+            push!(output, $func(input[row, :], cf[row]; kwargs...))
         end
-        return output 
+        return permutedims(hcat(output...))
     end
     )
 end
@@ -228,6 +228,43 @@ end
 
 
 """
+    sim_bm_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="human", n_rep=1)
+
+Simulates basilar membrane vibration for given acoustic input.
+
+# Arguments
+- `input::Vector{Float64}`: sound pressure waveform in pascals
+- `cf::Float64`: characteristic frequency of the IHC in Hz
+- `fs::Float64`: sampling rate in Hz
+- `cohc::Float64`: outer hair cell survival (from 0 to 1)
+- `cihc::Float64`: inner hair cell survival (from 0 to 1)
+- `species::String`: species, either ("cat" = cat, "human" = humans with Shera tuning, "human_glasberg" = humans with Glasberg tuning)
+
+# Returns
+- `output::Vector{Float64}`: basilar membrane output, same size as input
+"""
+function sim_bm_zbc2014(
+    input::Vector{Float64}, 
+    cf::Float64; 
+    fs::Float64=10e4,
+    cohc::Float64=1.0, 
+    cihc::Float64=1.0, 
+    species::String="human",
+)
+    # Map species string to species integer expected by IHCAN!
+    species_flag = Dict([("cat", 1), ("human", 2), ("human_glasberg", 3)])[species]
+    # Create empty array for output
+    output_ihc = zeros((length(input)*n_rep, ))
+    output_bm = zeros((length(input)*n_rep, ))
+    # Make call
+    BM!(input, cf, Int32(1), 1/fs, Int32(length(input)), cohc, cihc, Int32(species_flag), output_ihc, output_bm)
+    # Return
+    return output_bm
+end
+
+
+
+"""
     sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="human", n_rep=1)
 
 Simulates inner hair cell potential for given acoustic input.
@@ -238,10 +275,15 @@ Simulates inner hair cell potential for given acoustic input.
 - `fs::Float64`: sampling rate in Hz
 - `cohc::Float64`: outer hair cell survival (from 0 to 1)
 - `cihc::Float64`: inner hair cell survival (from 0 to 1)
+<<<<<<< HEAD
 - `species::String`: species, either "cat", "human" (Shera tuning), or "human_glasberg" (Glasberg tuning)
+=======
+- `species::String`: species, either ("cat" = cat, "human" = humans with Shera tuning, "human_glasberg" = humans with Glasberg tuning)
+- `n_rep::Int64`: how many repetitions to perform. Because the inner hair cell stage has no randomness, n_rep > 1 simply concatenates n_rep copies of IHC simulation and returns 
+>>>>>>> main
 
 # Returns
-- `output::Vector{Float64}`: inner hair cell potential output
+- `output::Vector{Float64}`: inner hair cell potential output, size of length(input)*n_rep
 """
 function sim_ihc_zbc2014(
     input::Vector{Float64}, 
@@ -266,7 +308,7 @@ end
 @dispatch_vectorized_cfs(sim_ihc_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_ihc_zbc2014)
 @dispatch_matrix_input(sim_ihc_zbc2014)
-@dispatch_vector_of_matrix_input(sim_ihc_zbc2014)
+#@dispatch_vector_of_matrix_input(sim_ihc_zbc2014)
 
 
 """
@@ -282,13 +324,10 @@ Simulates synapse output for a given inner hair cell input
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
 - `fractional::Bool`: whether we use ffGn or not, one of (true, false)
-- `n_rep::Int64`: number of repetititons to run 
+- `n_rep::Int64`: number of repetititons to run. We assume that the input was also generated using n_rep=n_rep, hence we infer that the input acoustic waveform is of length length(input)/n_rep.
 
 # Returns
-- `output::Vector{Float64}`: synapse output (unknown units?)
-
-# Warnings
-- n_rep is not tested and it's not clear that it's producing the right output behavior. If you intend to use the n_rep argument for anything other than n_rep > 1, examine your outputs carefully and report any bugs to GitHub
+- `output::Vector{Float64}`: synapse output (unknown units?), length is length(input)*n_rep
 """
 function sim_synapse_zbc2014(
     input::Vector{Float64}, 
@@ -309,7 +348,7 @@ function sim_synapse_zbc2014(
     # Create empty array for output
     output = zeros((length(input), ))
     # Make call
-    Synapse!(input, 1.0/fs, cf, Int32(length(input)), Int32(n_rep), spont, noiseType, implnt, fs_synapse, output)
+    Synapse!(input, 1.0/fs, cf, Int32(length(input)/n_rep), Int32(n_rep), spont, noiseType, implnt, fs_synapse, output)
     # Return
     return output
 end
@@ -318,7 +357,7 @@ end
 @dispatch_vectorized_cfs(sim_synapse_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_synapse_zbc2014)
 @dispatch_matrix_input(sim_synapse_zbc2014)
-@dispatch_vector_of_matrix_input(sim_synapse_zbc2014)
+#@dispatch_vector_of_matrix_input(sim_synapse_zbc2014)
 
 
 """
@@ -334,15 +373,21 @@ Simulates auditory nerve output (spikes and firing rate) for a given inner hair 
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
 - `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
-- `n_rep::Int64`: number of repetititons to run
+- `n_rep::Int64`: number of repetititons to run. We assume that the input was also generated using n_rep=n_rep, hence we infer that the input acoustic waveform is of length length(input)/n_rep.
 
 # Returns
-- `meanrate::Vector{Float64}`: analytical estimate of instantaneous firing rate
-- `varrrate::Vector{Float64}`: analytical estimate of instantaneous firing rate variance
-- `psth::Vector{Float64}`: peri-stimulus time histogram 
+- `meanrate::Vector{Float64}`: analytical estimate of instantaneous firing rate, of size length(input)
+- `varrrate::Vector{Float64}`: analytical estimate of instantaneous firing rate variance, of size length(input)
+- `psth::Vector{Float64}`: peri-stimulus time histogram, of size length(input)
 
-# Warnings
-- n_rep is not tested and it's not clear that it's producing the right output behavior. If you intend to use the n_rep argument for anything other than n_rep > 1, examine your outputs carefully and report any bugs to GitHub
+# Notes
+- The behavior of `n_rep` in sim_an_zbc2014 and derived functions differs slightly from 
+sim_synapse_zbc2014. sim_synapse_zbc2014 will return an array of length 
+`length(input) * n_rep`, and will contain a single response to n_rep concatenated copies 
+of the inner hair cell potential (assuming that sim_ihc_zbc2014 was also evaluated using
+n_rep=n_rep). sim_an_zbc2014 will return an array of length `length(input)`. Underneath,
+it generates the same synapse response as `sim_synapse_zbc2014`, but then averages over
+the repetitions and averages the spike train into a peristimulus time histogram (PSTH).  
 """
 function sim_an_zbc2014(
     input::Vector{Float64}, 
@@ -353,6 +398,8 @@ function sim_an_zbc2014(
     fractional::Bool=false, 
     n_rep::Int64=1
 )
+    # Calculate totalstim based on size of input
+    totalstim = Int64(length(input)/n_rep)
     # Map fiber type string to float code expected by Synapse!
     fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
     # Map power-law implementation type to float code expected by Syanpse!
@@ -360,14 +407,51 @@ function sim_an_zbc2014(
     # Map fractional to float code expected by Syanpse!
     noiseType = Dict([(true, 1.0), (false, 0.0)])[fractional]
     # Create empty array for output
-    meanrate = zeros((length(input), ))
-    varrate = zeros((length(input), ))
-    psth = zeros((length(input), ))
+    meanrate = zeros(totalstim)
+    varrate = zeros(totalstim)
+    psth = zeros(totalstim)
     # Make call
-    SingleAN!(input, cf, Int32(n_rep), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, 
+    SingleAN!(input, cf, Int32(n_rep), 1.0/fs, Int32(totalstim), fibertype, noiseType, implnt, 
               meanrate, varrate, psth)
     return (meanrate, varrate, psth)
 end
+
+
+"""
+    sim_spikes_zbc2014(input, cf; fs=10e4, fs_synapse=10e3, power_law="approximate", fractional=false, n_rep=1)
+
+Simulates auditory nerve output (spikes only) for a given inner hair cell input
+
+# Arguments
+- `input::Vector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
+- `cf::Float64`: characteristic frequency of the fiber in Hz
+- `fs::Float64`: sampling rate of the *input* in Hz
+- `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
+- `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
+- `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
+- `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
+- `n_rep::Int64`: number of repetititons to run 
+
+# Returns
+- `psth::Vector{Float64}`: peri-stimulus time histogram, size of length(input) (see docs for sim_an_zbc2014 to understand why)
+"""
+function sim_spikes_zbc2014(
+    input::Vector{Float64}, 
+    cf::Float64; 
+    fs::Float64=10e4,
+    fiber_type::String="high", 
+    power_law::String="approximate",
+    fractional::Bool=false, 
+    n_rep::Int64=1
+)
+    sim_an_zbc2014(input, cf; fs=fs, fiber_type=fiber_type, power_law=power_law, fractional=fractional, n_rep=n_rep)[3]
+end
+
+@dispatch_vectorized_input(sim_spikes_zbc2014)
+@dispatch_vectorized_cfs(sim_spikes_zbc2014)
+@dispatch_vectorized_input_and_cfs(sim_spikes_zbc2014)
+@dispatch_matrix_input(sim_spikes_zbc2014)
+#@dispatch_vector_of_matrix_input(sim_spikes_zbc2014)
 
 
 """
@@ -383,109 +467,83 @@ Simulates auditory nerve output (instantaneous firing rate) for a given inner ha
 - `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
 - `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
 - `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
+- `n_rep::Int64`: number of repetititons to run 
 
 # Returns
-- `meanrate::Vector{Float64}`: analytical estimate of instantaneous firing rate
+- `psth::Vector{Float64}`: analytical estimate of instantaneous firing rate, size of length(input) (see docs for sim_an_zbc2014 to understand why)
 """
 function sim_anrate_zbc2014(
     input::Vector{Float64}, 
-    cf::Float64; fs::Float64=10e4,
+    cf::Float64; 
+    fs::Float64=10e4,
     fiber_type::String="high", 
     power_law::String="approximate",
     fractional::Bool=false, 
+    n_rep::Int64=1
 )
-    # Map fiber type string to float code expected by Synapse!
-    fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
-    # Map power-law implementation type to float code expected by Syanpse!
-    implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[power_law]
-    # Map fractional to float code expected by Syanpse!
-    noiseType = Dict([(true, 1.0), (false, 0.0)])[fractional]
-    # Create empty array for output
-    meanrate = zeros((length(input), ))
-    varrate = zeros((length(input), ))
-    psth = zeros((length(input), ))
-    # Make call
-    SingleAN!(input, cf, Int32(1), 1.0/fs, Int32(length(input)), fibertype, noiseType, implnt, meanrate, varrate, psth)
-    return meanrate
+    sim_an_zbc2014(input, cf; fs=fs, fiber_type=fiber_type, power_law=power_law, fractional=fractional, n_rep=n_rep)[1]
 end
 
 @dispatch_vectorized_input(sim_anrate_zbc2014)
 @dispatch_vectorized_cfs(sim_anrate_zbc2014)
 @dispatch_vectorized_input_and_cfs(sim_anrate_zbc2014)
 @dispatch_matrix_input(sim_anrate_zbc2014)
-@dispatch_vector_of_matrix_input(sim_anrate_zbc2014)
+#@dispatch_vector_of_matrix_input(sim_anrate_zbc2014)
 
 
 """
-    sim_an_hcc2001(input, cf; fs=100e3)
+    BM!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, bmout)
 
-Simulates auditory nerve output (instantaneous firing rate) for a given acoustic input. 
+Direct binding to BM C function in model_IHC.c
 
-Auditory-nerve model from the Heinz, Colburn, and Carney (2001) paper cited below. Includes
-a gammatone filterbank (basilar membrane stage), a saturating nonlinearity (IHC stage), and
-adaptation dynamics (AN stage).
+Passes arguments directly to BM using ccall. Arrays are converted to pointers, 
+functions are converted to pointers, and all other types are converted directly to 
+corresponding types in C. Note that while there are type checks enforced automatically by 
+Julia, there are no sanity checks on any arguments.
 
 # Arguments
-- `input::Vector{Float64}`: acoustic stimulus (Pa)
-- `cf::Float64`: characteristic frequency of the fiber (Hz)
-- `fs::Float64`: sampling rate of the input (Hz)
-
-# Returns
-- `::Vector{Float64}`: Instantaneous firing rate (spikes/s)
+- `px::Vector{Float64}`: sound pressure waveform in pascals
+- `cf::Float64`: characteristic frequency of the fiber in Hz
+- `nrep::Int32`: number of repetitions to simulate. Note that for the IHC simulation, one "true" simulation is conducted and then that simulation is copied and tiled (because there is no randomness in the IHC simulation) to simulate multiple times.
+- `tdres::Float64`: time-domain resolution (i.e., reciprocal of sampling rate)
+- `totalstim::Int32`: number of samples in simulation
+- `cohc::Float64`: outer hair cell survival (from 0 to 1)
+- `cihc::Float64`: inner hair cell survival (from 0 to 1)
+- `species::Int32`: species, either (1 = cat, 2 = humans with Shera tuning, 3 = humans with Glasberg tuning)
+- `ihcout::Vector{Float64}`: array of same size as `px`, used to store IHC output from C
+- `bmout::Vector{Float64}`: array of same size as `px`, used to store BM output from C
 """
-function sim_an_hcc2001(input::Vector{Float64}, cf::Float64; fs::Float64=10e4)
-    # Calculate gammatone filterbank response
-    filterbank = make_erb_filterbank(fs, 1, cf)
-    bm = filt(filterbank, input)
-    
-    # Apply saturating nonlinearity
-    K = 1225
-    beta = -1
-    ihc = @. (atan(K * bm + beta) - atan(beta)) / (pi / 2 - atan(beta))
-
-    # Apply lowpass filter
-    filter = digitalfilter(Lowpass(4800; fs=fs), Butterworth(1))
-    for i in 1:7
-        ihc = filt(filter, ihc)
-    end
-
-    # Apply auditory nerve stage
-    dims = size(ihc)
-    C_I = zero(ihc)
-    C_L = zero(ihc)
-
-    T_s = 1 / fs     # sampling period
-    r_o = 50         # spontaneous discharge rate
-    V_I = 0.0005     # immediate "volume"
-    V_L = 0.005      # local "volume"
-    P_G = 0.03       # global permeability ("volume"/s)
-    P_L = 0.06       # local permeability ("volume"/s)
-    PI_rest = 0.012  # resting immediate permeability ("volume"/s)
-    PI_max = 0.6     # maximum immediate permeability ("volume"/s")... not sure why this is unused in paper eq.
-    C_G = 6666.7     # global concentration ("spikes/volume")
-    P_I = @. 0.0173 * log(1 + exp(34.657 * ihc))  # immediate permeability ("volume"/s)
-    C_I[1, :] .= r_o / PI_rest
-    C_L[1, :] .= C_I[1, :] * (PI_rest + P_L) / P_L
-
-    # Implement dynamics
-    for ii in 1:(dims[1]-1)
-        for kk in 1:dims[2]
-            C_I[ii+1, kk] = C_I[ii, kk] + (T_s / V_I) * (
-                    -P_I[ii, kk] * C_I[ii, kk] + P_L * (C_L[ii, kk] - C_I[ii, kk]))
-            C_L[ii+1, kk] = C_L[ii, kk] + (T_s / V_L) * (
-                    -P_L * (C_L[ii, kk] - C_I[ii, kk]) + P_G * (C_G - C_L[ii, kk]))
-        end
-    end
-
-    # Return
-    return P_I .* C_I
+function BM!(
+    px::Vector{Float64}, 
+    cf::Float64, 
+    nrep::Int32, 
+    tdres::Float64,
+    totalstim::Int32, 
+    cohc::Float64, 
+    cihc::Float64, 
+    species::Int32,
+    ihcout::Vector{Float64},
+    bmout::Vector{Float64},
+)
+    ccall(
+            (:BM, libzbc2014),       # function call
+            Cvoid,                   # return type
+            (                        # arg types
+                Ptr{Cdouble},        # px
+                Cdouble,             # cf
+                Cint,                # nrep
+                Cdouble,             # tdres
+                Cint,                # totalstim
+                Cdouble,             # cohc
+                Cdouble,             # cihc
+                Cint,                # species
+                Ptr{Cdouble},        # ihcout
+                Ptr{Cdouble},        # bmout
+            ),
+            px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, bmout  # pass arguments
+        )
 end
 
-@dispatch_vectorized_input(sim_an_hcc2001)
-@dispatch_vectorized_cfs(sim_an_hcc2001)
-@dispatch_vectorized_input_and_cfs(sim_an_hcc2001)
-@dispatch_matrix_input(sim_an_hcc2001)
-@dispatch_vector_of_matrix_input(sim_an_hcc2001)
 
 
 """

@@ -21,15 +21,16 @@ tol = 1e-2  # general tolerance on comparisons of approximate equality (should u
 @testset "Fractional Gaussian noise" begin
     # Test that we can call the function
     @test begin
-        sample = AuditoryNerveFiber.ffGn(Int32(10000), 1/fs, 0.75, 1.0, 1.0)
-        true
+        sample = AuditoryNerveFiber.ffGn(Int32(10000), 1/fs, 0.75, 0.0, 1.0)
+        sample = unsafe_wrap(Array, sample, 10000)
+        isapprox(sample, zeros(10000))
     end
     # Test that the noiseType switch behaves as expect
-    #@test begin
-    #    sample = ffGn(Int32(10000), 1/fs, 0.75, 0.0, 1.0)
-    #    sample = unsafe_wrap(Array, sample, 10000)
-    #    all(abs.(sample) .< tol)
-    #end
+    @test begin
+        sample = AuditoryNerveFiber.ffGn(Int32(10000), 1/fs, 0.75, 1.0, 1.0)
+        sample = unsafe_wrap(Array, sample, 10000)
+        var(sample) > 0.0
+    end
     # Test that raising the mean to the branch points in the code (0.5, 18.0 results in 
     # corresponding changes in sigma
     @test begin
@@ -47,6 +48,22 @@ end
 
 # Start by testing the direct bindings and just make sure that they run!
 @testset "C bindings: check callable" begin
+  # First, we try testing the direct C binding to the BM code (BM!)
+  @test begin
+      px = pt
+      cf = freq
+      nrep = Int32(1)
+      tdres = 1.0/fs
+      totalstim = Int32(dur*fs)
+      cohc = 1.0
+      cihc = 1.0
+      species = Int32(1)
+      ihcout = Vector{Cdouble}(zeros((Int64(dur*fs), )))
+      bmout = Vector{Cdouble}(zeros((Int64(dur*fs), )))
+      AuditoryNerveFiber.BM!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, bmout)
+      true
+  end
+
   # First, we try testing the direct C binding to the IHC code (IHCAN!)
   @test begin
       px = pt
@@ -206,7 +223,6 @@ end
     sim_ihc_zbc2014, 
     sim_synapse_zbc2014, 
     sim_anrate_zbc2014,
-    sim_an_hcc2001
 ] 
     # // Dispatch over array of inputs
     # Check that if we simulate a pure-tone response from a 1d input, or the same pure-tone
@@ -247,7 +263,7 @@ end
     @test begin
         output_1 = model_stage(pt, 500.0)
         output_2 = model_stage(pt.*2, 1500.0)
-        output_test = model_stage(transpose([pt pt.*2]), [500.0, 1500.0])
+        output_test = model_stage(permutedims([pt pt.*2]), [500.0, 1500.0])
 
         test_1 = all(output_1 .== output_test[1, :])
         test_2 = all(output_2 .== output_test[2, :])
@@ -255,20 +271,63 @@ end
         test_1 && test_2
     end
     # // Dispatch over vector of matrix input and vector of CFs
+    # @test begin
+    #     output_1 = model_stage(pt, 500.0)
+    #     output_2 = model_stage(pt.*2, 1500.0)
+    #     output_3 = model_stage(pt.*3, 500.0)
+    #     output_4 = model_stage(pt.*4, 1500.0)
+    #     output_test = model_stage([transpose([pt pt.*2]), transpose([pt.*3 pt.*4])], [500.0, 1500.0])
+
+    #     test_1 = all(output_1 .== output_test[1][1, :])
+    #     test_2 = all(output_2 .== output_test[1][2, :])
+    #     test_3 = all(output_3 .== output_test[2][1, :])
+    #     test_4 = all(output_4 .== output_test[2][2, :])
+
+    #     test_1 && test_2 && test_3 && test_4
+    # end
+end
+
+# Next we test that n_rep is handled appropriately
+@testset "Wrappers: check n_rep handling" begin
+
+    # Verify that sim_ihc_zbc2014 handles varying n_rep and returns correct lengths
     @test begin
-        output_1 = model_stage(pt, 500.0)
-        output_2 = model_stage(pt.*2, 1500.0)
-        output_3 = model_stage(pt.*3, 500.0)
-        output_4 = model_stage(pt.*4, 1500.0)
-        output_test = model_stage([transpose([pt pt.*2]), transpose([pt.*3 pt.*4])], [500.0, 1500.0])
-
-        test_1 = all(output_1 .== output_test[1][1, :])
-        test_2 = all(output_2 .== output_test[1][2, :])
-        test_3 = all(output_3 .== output_test[2][1, :])
-        test_4 = all(output_4 .== output_test[2][2, :])
-
-        test_1 && test_2 && test_3 && test_4
+        results = map(1:5:100) do n_rep
+            return length(sim_ihc_zbc2014(pt, 1000.0; n_rep=n_rep)) == (length(pt) * n_rep)
+        end
+        all(results)
     end
 
+    # Verify that sim_synapse_zbc2014 handles varying n_rep and returns correct lengths
+    @test begin
+        results = map(1:5:100) do n_rep
+            return length(sim_synapse_zbc2014(sim_ihc_zbc2014(pt, 1000.0; n_rep=n_rep), 1000.0; n_rep=n_rep)) == (length(pt) * n_rep)
+        end
+        all(results)
+    end
+
+    # Verify that sim_an_zbc2014 handles varying n_rep and returns correct lengths
+    @test begin
+        results = map(1:5:100) do n_rep
+            return length(sim_an_zbc2014(sim_ihc_zbc2014(pt, 1000.0; n_rep=n_rep), 1000.0; n_rep=n_rep)[1]) == (length(pt))
+        end
+        all(results)
+    end
+
+    # Verify that sim_anrate_zbc2014 handles varying n_rep and returns correct lengths
+    @test begin
+        results = map(1:5:100) do n_rep
+            return length(sim_anrate_zbc2014(sim_ihc_zbc2014(pt, 1000.0; n_rep=n_rep), 1000.0; n_rep=n_rep)) == (length(pt))
+        end
+        all(results)
+    end
+
+    # Verify that sim_spikes_zbc2014 handles varying n_rep and returns correct lengths
+    @test begin
+        results = map(1:5:100) do n_rep
+            return length(sim_spikes_zbc2014(sim_ihc_zbc2014(pt, 1000.0; n_rep=n_rep), 1000.0; n_rep=n_rep)) == (length(pt))
+        end
+        all(results)
+    end
 
 end
