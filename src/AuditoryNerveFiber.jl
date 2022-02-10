@@ -2,7 +2,6 @@ module AuditoryNerveFiber
 
 using DSP
 using FFTW
-using libzbc2014_jll
 const libzbc2014 = "/home/oxenham0/guest121/thesis/AuditoryNerveFiber.jl/external/libzbc2014.so"
 
 export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014, sim_bm_zbc2014, sim_spikes_zbc2014
