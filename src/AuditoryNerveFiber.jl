@@ -254,8 +254,8 @@ function sim_bm_zbc2014(
     # Map species string to species integer expected by IHCAN!
     species_flag = Dict([("cat", 1), ("human", 2), ("human_glasberg", 3)])[species]
     # Create empty array for output
-    output_ihc = zeros((length(input)*n_rep, ))
-    output_bm = zeros((length(input)*n_rep, ))
+    output_ihc = zeros((length(input), ))
+    output_bm = zeros((length(input), ))
     # Make call
     BM!(input, cf, Int32(1), 1/fs, Int32(length(input)), cohc, cihc, Int32(species_flag), output_ihc, output_bm)
     # Return
