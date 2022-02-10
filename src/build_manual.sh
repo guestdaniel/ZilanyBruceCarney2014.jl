@@ -1,6 +1,6 @@
-clang -c -fPIC -O3 -march=native model_IHC.c
-clang -c -fPIC -O3 -march=native model_Synapse.c
-clang -c -fPIC -O3 -march=native complex.c 
-clang -c -fPIC -O3 -march=native test.c 
-clang -shared -o libzbc2014.so model_IHC.o model_Synapse.o complex.o test.o
+gcc -c -fPIC -Ofast model_IHC.c
+gcc -c -fPIC -Ofast model_Synapse.c
+gcc -c -fPIC -Ofast complex.c 
+gcc -c -fPIC -Ofast test.c 
+gcc -shared -o libzbc2014.so model_IHC.o model_Synapse.o complex.o test.o
 

@@ -20,11 +20,11 @@ tol = 1e-2  # general tolerance on comparisons of approximate equality (should u
 # Test ffGn
 @testset "Fractional Gaussian noise" begin
     # Test that we can call the function
-    @test begin
-        sample = AuditoryNerveFiber.ffGn(Int32(10000), 1/fs, 0.75, 0.0, 1.0)
-        sample = unsafe_wrap(Array, sample, 10000)
-        isapprox(sample, zeros(10000))
-    end
+#    @test begin
+#        sample = AuditoryNerveFiber.ffGn(Int32(10000), 1/fs, 0.75, 0.0, 1.0)
+#        sample = unsafe_wrap(Array, sample, 10000)
+#        isapprox(sample, zeros(10000))
+#    end
     # Test that the noiseType switch behaves as expect
     @test begin
         sample = AuditoryNerveFiber.ffGn(Int32(10000), 1/fs, 0.75, 1.0, 1.0)
