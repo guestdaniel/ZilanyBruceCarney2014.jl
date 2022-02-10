@@ -29,3 +29,4 @@ Manifest.toml
 
 build/
 products/
+.vscode
