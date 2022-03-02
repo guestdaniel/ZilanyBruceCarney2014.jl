@@ -401,7 +401,7 @@ int SpikeGenerator(double *synouttmp, double tdres, int totalstim, int nrep, dou
   NoutMax = (long) ceil(totalstim*nrep*tdres/dead);    
 
   /* Generate random numbers by call to Julia function random_numbers */       
-  randNums = random_numbers(NoutMax);
+  randNums = random_numbers(NoutMax+1);
   randBufIndex = 0;
     
 	/* Calculate useful constants */
