@@ -261,8 +261,7 @@ function sim_bm_zbc2014(
     # Return
     return output_bm
 end
-
-
+@dispatch_vectorized_cfs(sim_bm_zbc2014)
 
 """
     sim_ihc_zbc2014(input, cf; fs=10e4, cohc=1.0, cihc=1.0, species="human", n_rep=1)
