@@ -1,19 +1,18 @@
 /*
-  New text
+  Additional text
   ========
   This is an adapted version of the Zilany, Bruce, and Carney (2014) auditory
   nerve model available at
   https://www.urmc.rochester.edu/labs/carney/publications-code/auditory-models.aspx.
 
-  Some formatting changes were made to the code to improve readability. This was
-  exclusively performed in the functions that have direct Julia bindings (IHCAN,
-  Synapse, and SingleAN). The Julia test suite available in Hearing.jl can
-  verify that these formatting changes did not affect any of the code.
-
-  The only changes to the logic of the code were to handle function pointers
+  List of changes:
+  - Some formatting changes were made to the code to improve readability.
+  - The only changes to the logic of the code were to handle function pointers
   from Julia as arguments where necessary and to strip out any code specific
-  to mex/MATLAB. Again, the test suite available in Hearing.jl can verify that
-  these changes did not alter the essential functionality of the code.
+  to mex/MATLAB. 
+  - A basilar membrane function was added to allow simulation of only basilar membrane 
+  responses. This function came from personal correspondence with Braden Maxwell.
+
 
   - Daniel R. Guest, 2021
 
