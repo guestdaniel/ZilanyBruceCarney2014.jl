@@ -1,8 +1,7 @@
 # AuditoryNerveFiber.jl
 
 AuditoryNerveFiber.jl is a Julia package that provides access to auditory-nerve models in Julia. 
-Most implementations of auditory-nerve models in the literature are written in C or MATLAB, or a mixture of the two.
-This package provides access these models in Julia using a consistent interface so that users can model easily in Julia without worrying about the details of implementation for each model or knowing the native language of each model.
+Presently, this package provides access to the Zilany, Bruce, and Carney (2014) auditory-nerve model. 
 
 ## Why a new package? Why Julia?
 Existing bindings for some models already exist in several Python or MATLAB packages such as [cochlea](https://github.com/mrkrd/cochlea), [apcmodels](https://github.com/guestdaniel/apcmodels), and [Auditory Modeling Toolbox](https://amtoolbox.org/).
@@ -26,8 +25,11 @@ More models to come soon!
 
 To install AuditoryNerveFiber.jl, simply enter the package REPL (press "]" inside the Julia REPL) and run the command:
 ```
-add git@github.com:guestdaniel/AuditoryNerveFiber.jl
+add AuditoryNerveFiber
 ```
+
+In the process of installation, appropriate binaries for the models should be automatically downloaded and configured.
+If any issues arise in the installation process, please email guest121@umn.edu or open an issue!
 
 # Interface
 Currently, two "levels" of functions are provided.
@@ -52,7 +54,7 @@ Development of this package was supported by the following funding resources:
 
 # License and acknowledgments
 
-AuditoryNerveFiber.jl is licensed under the [MIT license](https://opensource.org/licenses/MIT). 
+AuditoryNerveFiber.jl is licensed under the [GNU AGPL v3 license](https://www.gnu.org/licenses/agpl-3.0.en.html). 
 AuditoryNerveFiber.jl depends on code contributions from the following authors:
 - Muhammad S. A. Zilany
 - Ian C. Bruce
