@@ -2,7 +2,8 @@ module AuditoryNerveFiber
 
 using DSP
 using FFTW
-using libzbc2014_jll
+#using libzbc2014_jll
+const libzbc2014 = "/home/daniel/AuditoryNerveFiber.jl/external/libzbc2014.so"
 
 export sim_ihc_zbc2014, sim_synapse_zbc2014, sim_an_zbc2014, sim_anrate_zbc2014, sim_bm_zbc2014, sim_spikes_zbc2014
 
@@ -386,7 +387,7 @@ it generates the same synapse response as `sim_synapse_zbc2014`, but then averag
 the repetitions and averages the spike train into a peristimulus time histogram (PSTH).  
 """
 function sim_an_zbc2014(
-    input::Vector{Float64}, 
+    input,
     cf::Float64; 
     fs::Float64=10e4,
     fiber_type::String="high", 
@@ -432,7 +433,7 @@ Simulates auditory nerve output (spikes only) for a given inner hair cell input
 - `psth::Vector{Float64}`: peri-stimulus time histogram, size of `length(input)/n_rep` (see docs for `sim_an_zbc2014` to understand why)
 """
 function sim_spikes_zbc2014(
-    input::Vector{Float64}, 
+    input,
     cf::Float64; 
     fs::Float64=10e4,
     fiber_type::String="high", 
@@ -469,7 +470,7 @@ Simulates auditory nerve output (instantaneous firing rate) for a given inner ha
 - `psth::Vector{Float64}`: analytical estimate of instantaneous firing rate, size of `length(input)` (see docs for `sim_an_zbc2014` to understand why)
 """
 function sim_anrate_zbc2014(
-    input::Vector{Float64}, 
+    input,
     cf::Float64; 
     fs::Float64=10e4,
     fiber_type::String="high", 
@@ -675,7 +676,7 @@ Julia, there are no sanity checks on any arguments.
 - `psth::Vector{Float64}`: array of same size as `ihcout`, used to store empirical PSTH output
 """
 function SingleAN!(
-    ihcout::Vector{Float64}, 
+    ihcout,
     cf::Float64, 
     nrep::Int32,
     tdres::Float64, 
