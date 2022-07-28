@@ -48,22 +48,6 @@ end
 
 # Start by testing the direct bindings and just make sure that they run!
 @testset "C bindings: check callable" begin
-  # First, we try testing the direct C binding to the BM code (BM!)
-  @test begin
-      px = pt
-      cf = freq
-      nrep = Int32(1)
-      tdres = 1.0/fs
-      totalstim = Int32(dur*fs)
-      cohc = 1.0
-      cihc = 1.0
-      species = Int32(1)
-      ihcout = Vector{Cdouble}(zeros((Int64(dur*fs), )))
-      bmout = Vector{Cdouble}(zeros((Int64(dur*fs), )))
-      AuditoryNerveFiber.BM!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, bmout)
-      true
-  end
-
   # First, we try testing the direct C binding to the IHC code (IHCAN!)
   @test begin
       px = pt
@@ -208,83 +192,6 @@ end
         tuning_curve = map(cf -> mean(sim_an_zbc2014(sim_ihc_zbc2014(pt, cf), cf)[1]), cfs)
         abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
     end
-end
-
-# Next we check that dispatch features work correctly
-# Several flavors of dispatch are set up for all model functions that have signatures of the
-# form model(input, cf; kwargs...) and return a single vector output. These methods are 
-# defined via macro for each model function the same way. We have several flavors to test:
-# - Dispatch over vector of inputs
-# - Dispatch over vector of cfs
-# - Dispatch over vector of inputs and CFs
-# - Dispatch over a matrix input and vector of CFs
-# - Dispatch over a vector of matrix inputs and a vector of CFs
-@testset "Wrappers: iteration  $model_stage" for model_stage in [
-    sim_ihc_zbc2014, 
-    sim_synapse_zbc2014, 
-    sim_anrate_zbc2014,
-] 
-    # // Dispatch over array of inputs
-    # Check that if we simulate a pure-tone response from a 1d input, or the same pure-tone
-    # response twice from a 2d input, that we get the same result out
-    @test begin
-        output_1d = model_stage(pt, freq)
-        output_2d = model_stage([pt, pt], 1000.0)
-        all(output_1d .== output_2d[1] .== output_2d[2])
-    end
-    # // Dispatch over array of CFs
-    # Check that if we simulate a pure-tone response at two different CFs using two separate
-    # calls, we get the same response at simulating responses at two different CFs using
-    # the same call
-    @test begin
-        output_low = model_stage(pt, 500.0)
-        output_high = model_stage(pt, 1500.0)
-        output_2d = model_stage(pt, [500.0, 1500.0])
-        all(output_low .== output_2d[1, :]) && all(output_high .== output_2d[2, :])
-    end
-    # // Dispatch over both
-    # Check that we can simulate a response to two stimuli at two CFs either using manual
-    # separate calls or one joined call and dispatch handles everything correctly.
-    @test begin
-        output_1 = model_stage(pt, 500.0)
-        output_2 = model_stage(pt.*2, 500.0)
-        output_3 = model_stage(pt, 1500.0)
-        output_4 = model_stage(pt.*2, 1500.0)
-        output_test = model_stage([pt, pt.*2], [500.0, 1500.0])
-
-        test_1 = all(output_1 .== output_test[1][1, :])
-        test_2 = all(output_2 .== output_test[2][1, :])
-        test_3 = all(output_3 .== output_test[1][2, :])
-        test_4 = all(output_4 .== output_test[2][2, :])
-
-        test_1 && test_2 && test_3 && test_4
-    end
-    # // Dispatch over matrix input and vector of CFs
-    @test begin
-        output_1 = model_stage(pt, 500.0)
-        output_2 = model_stage(pt.*2, 1500.0)
-        output_test = model_stage(permutedims([pt pt.*2]), [500.0, 1500.0])
-
-        test_1 = all(output_1 .== output_test[1, :])
-        test_2 = all(output_2 .== output_test[2, :])
-
-        test_1 && test_2
-    end
-    # // Dispatch over vector of matrix input and vector of CFs
-    # @test begin
-    #     output_1 = model_stage(pt, 500.0)
-    #     output_2 = model_stage(pt.*2, 1500.0)
-    #     output_3 = model_stage(pt.*3, 500.0)
-    #     output_4 = model_stage(pt.*4, 1500.0)
-    #     output_test = model_stage([transpose([pt pt.*2]), transpose([pt.*3 pt.*4])], [500.0, 1500.0])
-
-    #     test_1 = all(output_1 .== output_test[1][1, :])
-    #     test_2 = all(output_2 .== output_test[1][2, :])
-    #     test_3 = all(output_3 .== output_test[2][1, :])
-    #     test_4 = all(output_4 .== output_test[2][2, :])
-
-    #     test_1 && test_2 && test_3 && test_4
-    # end
 end
 
 # Next we test that n_rep is handled appropriately
