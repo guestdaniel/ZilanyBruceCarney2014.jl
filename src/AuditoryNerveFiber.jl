@@ -7,8 +7,8 @@ const libzbc2014 = "/home/daniel/AuditoryNerveFiber.jl/external/libzbc2014.so"
 
 export sim_ihc_zbc2014, sim_ihc_zbc2014!,
        sim_synapse_zbc2014, sim_synapse_zbc2014!,
-       sim_an_zbc2014, sim_spikes_zbc2014,
-       sim_anrate_zbc2014, sim_anrate_zbc2014!
+       sim_anrate_zbc2014, sim_anrate_zbc2014!,
+       sim_an_zbc2014, sim_spikes_zbc2014
 
 include("utils.jl")
 
@@ -40,17 +40,23 @@ function sim_ihc_zbc2014(
 )
     # Create empty array for output
     output = zeros(length(input)*n_rep)
-    # Call modifying function
-    sim_ihc_zbc2014!(output, input, cf; fs=fs, cohc=cohc, cihc=cihc, species=species, n_rep=n_rep)
+
+    # Call in-place version function
+    sim_ihc_zbc2014!(
+        output,
+        input,
+        cf;
+        fs=fs,
+        cohc=cohc,
+        cihc=cihc,
+        species=species,
+        n_rep=n_rep
+    )
+
     # Return
     return output
 end
 
-"""
-    sim_ihc_zbc2014!(output, input, cf; kwargs...)
-
-Same as `sim_ihc_zbc2014`, except modifies output vector in-place
-"""
 function sim_ihc_zbc2014!(
     output::AbstractVector{Float64},
     input::AbstractVector{Float64},
@@ -62,9 +68,24 @@ function sim_ihc_zbc2014!(
     n_rep::Int64=1
 )
     # Map species string to species integer expected by IHCAN!
-    species_flag = Dict([("cat", 1), ("human", 2), ("human_glasberg", 3)])[species]
+    species_flag = Dict(
+        "cat" => 1,
+        "human" => 2,
+        "human_glasberg" => 3
+    )[species]
+
     # Make call to underlying C function
-    IHCAN!(input, cf, Int32(n_rep), 1/fs, Int32(length(input)), cohc, cihc, Int32(species_flag), output);
+    IHCAN!(
+        input,
+        cf,
+        Int32(n_rep),
+        1/fs,
+        Int32(length(input)),
+        cohc,
+        cihc,
+        Int32(species_flag),
+        output
+    )
 end
 
 """
@@ -97,16 +118,24 @@ function sim_synapse_zbc2014(
 )
     # Create empty array for output
     output = zeros(length(input))
-    sim_synapse_zbc2014!(output, input, cf; fs=fs, fs_synapse=fs_synapse, fiber_type=fiber_type, power_law=power_law, fractional=fractional, n_rep=n_rep)
+
+    # Make call to in-place function
+    sim_synapse_zbc2014!(
+        output,
+        input,
+        cf;
+        fs=fs,
+        fs_synapse=fs_synapse,
+        fiber_type=fiber_type,
+        power_law=power_law,
+        fractional=fractional,
+        n_rep=n_rep
+    )
+
     # Return
     return output
 end
 
-"""
-    sim_synapse_zbc2014!(output, input, cf; kwargs...)
-
-Same as `sim_synapse_zbc2014`, except modifies output vector in-place
-"""
 function sim_synapse_zbc2014!(
     output::AbstractVector{Float64},
     input::AbstractVector{Float64},
@@ -119,17 +148,117 @@ function sim_synapse_zbc2014!(
     n_rep::Int64=1
 )
     # Map fiber type string to float code expected by Synapse!
-    spont = Dict([("low", 0.1), ("medium", 4.0), ("high", 100.0)])[fiber_type]
+    spont = Dict(
+        "low" => 0.1,
+        "medium" => 4.0,
+        "high" => 100.0
+    )[fiber_type]
+
     # Map power-law implementation type to float code expected by Syanpse!
-    implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[power_law]
+    implnt = Dict(
+        "actual" => 1.0,
+        "approximate" => 0.0
+    )[power_law]
+
     # Map fractional to float code expected by Syanpse!
-    noiseType = Dict([(true, 1.0), (false, 0.0)])[fractional]
-    # Make call
-    Synapse!(input, 1.0/fs, cf, Int32(length(input)/n_rep), Int32(n_rep), spont, noiseType, implnt, fs_synapse, output)
+    noiseType = Dict(
+        true => 1.0,
+        false => 0.0
+    )[fractional]
+
+    # Synthesize ffGn
+    ffGn = ffGn_native(
+        Int(ceil((length(input) + 2 * floor(7500 / (cf / 1e3))) * 1/fs * fs_synapse)),
+        1/fs_synapse,
+        0.9,
+        noiseType,
+        spont,
+    )
+
+    # Make call to underlying C function
+    Synapse!(
+        input,
+        ffGn,
+        1.0/fs,
+        cf,
+        Int32(length(input)/n_rep),
+        Int32(n_rep),
+        spont,
+        noiseType,
+        implnt,
+        fs_synapse,
+        output
+    )
+
     # Return
     return output
 end
 
+
+"""
+    sim_anrate_zbc2014(input, cf; fs=100e3, fs_synapse=10e3, power_law="approximate", fractional=false)
+
+Simulates auditory nerve output (instantaneous firing rate) for a given inner hair cell input
+
+# Arguments
+- `input::Vector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
+- `cf::Float64`: characteristic frequency of the fiber in Hz
+- `fs::Float64`: sampling rate of the *input* in Hz
+- `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
+- `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
+- `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
+- `fractional::Bool`: whether we use ffGn or not, one of (true, false)
+- `n_rep::Int64`: number of repetititons to run
+
+# Returns
+- `::Vector{Float64}`: analytical estimate of instantaneous firing rate, size of `length(input)` (see docs for `sim_an_zbc2014` to understand why)
+"""
+function sim_anrate_zbc2014(
+    input,
+    cf::Float64;
+    fs::Float64=100e3,
+    fiber_type::String="high",
+    power_law::String="approximate",
+    fractional::Bool=false,
+    n_rep::Int64=1
+)
+    synout = sim_synapse_zbc2014(
+        input,
+        cf;
+        fs=fs,
+        fiber_type=fiber_type,
+        power_law=power_law,
+        fractional=fractional,
+        n_rep=n_rep
+    )
+
+    return synout ./ (1.0 .+ 0.75e-3 .* synout)
+end
+
+function sim_anrate_zbc2014!(
+    output::AbstractVector{Float64},
+    input::AbstractVector{Float64},
+    cf::Float64;
+    fs::Float64=100e3,
+    fiber_type::String="high",
+    power_law::String="approximate",
+    fractional::Bool=false,
+    n_rep::Int64=1,
+)
+    sim_synapse_zbc2014!(
+        output,
+        input,
+        cf;
+        fs=fs,
+        fiber_type=fiber_type,
+        power_law=power_law,
+        fractional=fractional,
+        n_rep=n_rep
+    )
+
+    output .= output ./ (1.0 .+ 0.75e-3 .* output)
+    return output
+end
 
 """
     sim_an_zbc2014(input, cf; fs=100e3, fs_synapse=10e3, power_law="approximate", fractional=false, n_rep=1)
@@ -159,7 +288,10 @@ of the inner hair cell potential to a single copy of the underlying acoustic sti
 (assuming that `sim_ihc_zbc2014` was also evaluated using
 `n_rep=n_rep`). `sim_an_zbc2014` will return an array of length `length(input)`. Underneath,
 it generates the same synapse response as `sim_synapse_zbc2014`, but then averages over
-the repetitions and averages the spike train into a peristimulus time histogram (PSTH).  
+the repetitions and averages the spike train into a peristimulus time histogram (PSTH).
+
+# TODO
+- Modify this function to match style of previous functions
 """
 function sim_an_zbc2014(
     input::AbstractVector{Float64},
@@ -172,19 +304,12 @@ function sim_an_zbc2014(
 )
     # Calculate totalstim based on size of input
     totalstim = Int64(length(input)/n_rep)
-    # Map fiber type string to float code expected by Synapse!
-    fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
-    # Map power-law implementation type to float code expected by Syanpse!
-    implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[power_law]
-    # Map fractional to float code expected by Syanpse!
-    noiseType = Dict([(true, 1.0), (false, 0.0)])[fractional]
     # Create empty array for output
     meanrate = zeros(totalstim)
     varrate = zeros(totalstim)
     psth = zeros(totalstim)
     # Make call
-    SingleAN!(input, cf, Int32(n_rep), 1.0/fs, Int32(totalstim), fibertype, noiseType, implnt, 
-              meanrate, varrate, psth)
+    sim_an_zbc2014!(meanrate, varrate, psth, input, cf; fs=fs, fiber_type=fiber_type, power_law=power_law, fractional=fractional, n_rep=n_rep)
     return (meanrate, varrate, psth)
 end
 
@@ -208,92 +333,28 @@ function sim_an_zbc2014!(
     # Calculate totalstim based on size of input
     totalstim = Int64(length(input)/n_rep)
     # Map fiber type string to float code expected by Synapse!
+    spont = Dict([("low", 0.1), ("medium", 4.0), ("high", 100.0)])[fiber_type]
+    # Map fiber type string to float code expected by Synapse!
     fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
     # Map power-law implementation type to float code expected by Syanpse!
     implnt = Dict([("actual", 1.0), ("approximate", 0.0)])[power_law]
     # Map fractional to float code expected by Syanpse!
     noiseType = Dict([(true, 1.0), (false, 0.0)])[fractional]
+    # Synthesize ffGn
+    ffGn = ffGn_native(
+        Int(ceil((length(input) + 2 * floor(7500 / (cf / 1e3))) * 1/fs * 10e3)),
+        1/10e3,
+        0.9,
+        noiseType,
+        spont,
+    )
     # Make call
-    SingleAN!(input, cf, Int32(n_rep), 1.0/fs, Int32(totalstim), fibertype, noiseType, implnt,
+    SingleAN!(input, ffGn, cf, Int32(n_rep), 1.0/fs, Int32(totalstim), fibertype, noiseType, implnt,
               meanrate, varrate, psth)
     return (meanrate, varrate, psth)
 end
 
-
-"""
-    sim_spikes_zbc2014(input, cf; fs=100e3, fs_synapse=10e3, power_law="approximate", fractional=false, n_rep=1)
-
-Simulates auditory nerve output (spikes only) for a given inner hair cell input
-
-# Arguments
-- `input::Vector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
-- `cf::Float64`: characteristic frequency of the fiber in Hz
-- `fs::Float64`: sampling rate of the *input* in Hz
-- `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
-- `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
-- `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
-- `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
-- `n_rep::Int64`: number of repetititons to run 
-
-# Returns
-- `psth::Vector{Float64}`: peri-stimulus time histogram, size of `length(input)/n_rep` (see docs for `sim_an_zbc2014` to understand why)
-"""
-function sim_spikes_zbc2014(
-    input,
-    cf::Float64; 
-    fs::Float64=100e3,
-    fiber_type::String="high", 
-    power_law::String="approximate",
-    fractional::Bool=false, 
-    n_rep::Int64=1
-)
-    sim_an_zbc2014(input, cf; fs=fs, fiber_type=fiber_type, power_law=power_law, fractional=fractional, n_rep=n_rep)[3]
-end
-
-"""
-    sim_anrate_zbc2014(input, cf; fs=100e3, fs_synapse=10e3, power_law="approximate", fractional=false)
-
-Simulates auditory nerve output (instantaneous firing rate) for a given inner hair cell input
-
-# Arguments
-- `input::Vector{Float64}`: input hair cell potential (from sim_ihc_zbc2014)
-- `cf::Float64`: characteristic frequency of the fiber in Hz
-- `fs::Float64`: sampling rate of the *input* in Hz
-- `fs_synapse::Float64`: sampling rate of the interior synapse simulation. The ratio between fs and fs_synapse must be an integer.
-- `fiber_type::String`: fiber type, one of ("low", "medium", "high") spontaneous rate
-- `power_law::String`: whether we use true or approximate power law adaptation, one of ("actual", "approximate")
-- `fractional::Bool`: whether we use ffGn or not, one of (true, talse)
-- `n_rep::Int64`: number of repetititons to run 
-
-# Returns
-- `psth::Vector{Float64}`: analytical estimate of instantaneous firing rate, size of `length(input)` (see docs for `sim_an_zbc2014` to understand why)
-"""
-function sim_anrate_zbc2014(
-    input,
-    cf::Float64; 
-    fs::Float64=100e3,
-    fiber_type::String="high", 
-    power_law::String="approximate",
-    fractional::Bool=false, 
-    n_rep::Int64=1
-)
-    synout = sim_synapse_zbc2014(input, cf; fs=fs, fiber_type=fiber_type, power_law=power_law, fractional=fractional, n_rep=n_rep)
-    return synout ./ (1.0 .+ 0.75e-3 .* synout)
-end
-
-function sim_anrate_zbc2014!(
-    output::AbstractVector{Float64},
-    input::AbstractVector{Float64},
-    cf::Float64;
-    fs::Float64=100e3,
-    fiber_type::String="high",
-    power_law::String="approximate",
-    fractional::Bool=false,
-    n_rep::Int64=1,
-)
-    sim_synapse_zbc2014!(output, input, cf; fs=fs, fiber_type=fiber_type, power_law=power_law, fractional=fractional, n_rep=n_rep)
-    output .= output ./ (1.0 .+ 0.75e-3 .* output)
-end
+sim_spikes_zbc2014(args...; kwargs...) = sim_an_zbc2014(args...; kwargs...)[3]
 
 """
     IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout)
@@ -368,8 +429,9 @@ Julia, there are no sanity checks on any arguments.
 - `synouttmp::Vector{Float64}`: array of same size as `ihcout`, used to store output from C
 """
 function Synapse!(
-    ihcout::Vector{Float64}, 
-    tdres::Float64, 
+    ihcout::Vector{Float64},
+    ffGn::Vector{Float64},
+    tdres::Float64,
     cf::Float64,
     totalstim::Int32, 
     nrep::Int32, 
@@ -384,6 +446,7 @@ function Synapse!(
             Cdouble,                 # return type
             (
                 Ptr{Cdouble}, # ihcout
+                Ptr{Cdouble}, # ffGn
                 Cdouble,      # tdres
                 Cdouble,      # cf
                 Cint,         # totalstim
@@ -393,11 +456,9 @@ function Synapse!(
                 Cdouble,      # implnt
                 Cdouble,      # sampFreq
                 Ptr{Cdouble}, # synouttmp
-                Ptr{nothing}, # ffGn
-                Ptr{nothing}  # decimate_fft
+                Ptr{nothing}  # decimate
             ),
-            ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp,   # input args
-            @cfunction(ffGn, Ptr{Cdouble}, (Cint, Cdouble, Cdouble, Cdouble, Cdouble)),          # input cfunction
+            ihcout, ffGn, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp,   # input args
             @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint))                   # input cfunction
         )
 end
@@ -427,7 +488,8 @@ Julia, there are no sanity checks on any arguments.
 - `psth::Vector{Float64}`: array of same size as `ihcout`, used to store empirical PSTH output
 """
 function SingleAN!(
-    ihcout,
+    ihcout::Vector{Float64},
+    ffGn::Vector{Float64},
     cf::Float64, 
     nrep::Int32,
     tdres::Float64, 
@@ -444,6 +506,7 @@ function SingleAN!(
             Cvoid,                    # return type
             (
                 Ptr{Cdouble},  # ihcout
+                Ptr{Cdouble},  # ffGn
                 Cdouble,       # cf
                 Cint,          # nrep
                 Cdouble,       # tdres
@@ -454,12 +517,10 @@ function SingleAN!(
                 Ptr{Cdouble},  # meanrate
                 Ptr{Cdouble},  # varrate
                 Ptr{Cdouble},  # psth
-                Ptr{nothing},  # ffGn
                 Ptr{nothing},  # decimate
                 Ptr{nothing}   # random_numbers
             ),
-            ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt, meanrate, varrate, psth,  # input args
-            @cfunction(ffGn, Ptr{Cdouble}, (Cint, Cdouble, Cdouble, Cdouble, Cdouble)),                 # input cfunction
+            ihcout, ffGn, cf, nrep, tdres, totalstim, fibertype, noiseType, implnt, meanrate, varrate, psth,  # input args
             @cfunction(decimate, Ptr{Cdouble}, (Ptr{Cdouble}, Cint, Cint)),                         # input cfunction
             @cfunction(random_numbers, Ptr{Cdouble}, (Cint, ))                                          # input cfunction
         )        

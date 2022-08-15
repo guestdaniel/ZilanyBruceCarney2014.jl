@@ -1,7 +1,9 @@
 """
-This testing suite handles very basic tests of the implemented auditory nerve models... Namely, it makes sure that they can be run without error using
-default arguments and empty/standard inputs and it makes sure that basic response properties (e.g., spontaneous rate and rate-level function) are
-approximately correct (i.e., exact spontaneous rates are not checked, but relative spontaneous rates like high > low are checked).
+This testing suite tests tools and AN models implemented in ANF.jl. It makes
+sure that models can be evaluated without error, makes sure arguments are
+handled correctly and return correct output shapes, and it makes sure that
+response properties are correct at a coarse level (exact response properties
+are tested [visually] elsewhere).
 """
 
 using Test
@@ -11,39 +13,39 @@ using Statistics
 using DSP
 
 # Declare various constants that hold across all tests in this file
-fs = 100_000.0
+fs = 100e3
 dur = 0.1
 freq = 1000.0
 pt = scale_dbspl(pure_tone(freq, 0.0, dur, fs), 50.0)
-tol = 1e-2  # general tolerance on comparisons of approximate equality (should upgrade to isapprox)
+pt_up = scale_dbspl(pure_tone(freq, 0.0, dur, fs*5), 50.0)[1:50000]
+tol = 1e-3  # absolute tolerance on comparisons of approximate equality
 
 # Test ffGn
 @testset "Fractional Gaussian noise" begin
     # Test that we can call the function
     @test begin
-        sample = AuditoryNerveFiber.ffGn(Int32(10000), 1/fs, 0.75, 0.0, 1.0)
-        sample = unsafe_wrap(Array, sample, 10000)
+        sample = AuditoryNerveFiber.ffGn_native(10000, 1/fs, 0.75, 0.0, 1.0)
         isapprox(sample, zeros(10000))
     end
     # Test that the noiseType switch behaves as expect
     @test begin
-        sample = AuditoryNerveFiber.ffGn(Int32(10000), 1/fs, 0.75, 1.0, 1.0)
-        sample = unsafe_wrap(Array, sample, 10000)
+        sample = AuditoryNerveFiber.ffGn_native(10000, 1/fs, 0.75, 1.0, 1.0)
         var(sample) > 0.0
     end
-    # Test that raising the mean to the branch points in the code (0.5, 18.0 results in 
-    # corresponding changes in sigma
+    # Test that raising the mean to the branch points in the code (0.5, 18.0
+    # results in corresponding changes in output variance
     @test begin
-        myfunc(mu) = std(unsafe_wrap(Array, AuditoryNerveFiber.ffGn(Int32(100000), 1/fs, 0.75, 1.0, mu), 100000))
+        myfunc(mu) = std(AuditoryNerveFiber.ffGn_native(100000, 1/fs, 0.75, 1.0, mu))
         vars = map(myfunc, [0.4, 10.0, 20.0])
         vars[1] < vars[2] < vars[3]
     end
 end
 
-# Test upsampling function
+# Test upsampling function by upsampling pure tone and then verifying that points
+# corresponding to original sample points match
 @test begin
     pt_upsampled = AuditoryNerveFiber.upsample(pt, 5)
-    maximum(abs.(pt_upsampled[1:5:length(pt_upsampled)] - pt)) < tol
+    maximum(abs.(pt_upsampled - pt_up)) < tol
 end
 
 # Start by testing the direct bindings and just make sure that they run!
@@ -66,6 +68,7 @@ end
   # Next, we try testing the direct C binding to the Synapse code (Synapse!)
   @test begin
       px = pt
+      ffGn = zeros(Int(ceil((length(px) + 2 * floor(7500 / (freq / 1e3))) * 1/fs * 10e3)))
       tdres = 1.0/fs
       cf = freq
       totalstim = Int32(dur*fs)
@@ -77,11 +80,11 @@ end
       cohc = 1.0
       cihc = 1.0
       species = Int32(1)
-      ihcout = Vector{Cdouble}(zeros((Int64(dur*fs), )))
-      synouttmp = Vector{Cdouble}(zeros((Int64(dur*fs), )))
+      ihcout = zeros(length(px))
+      synouttmp = zeros(length(px))
 
       AuditoryNerveFiber.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout)
-      AuditoryNerveFiber.Synapse!(ihcout, tdres, cf, totalstim, nrep, spont, noiseType, implnt,
+      AuditoryNerveFiber.Synapse!(ihcout, ffGn, tdres, cf, totalstim, nrep, spont, noiseType, implnt,
                        sampFreq, synouttmp)
       true
   end
@@ -101,14 +104,15 @@ end
       cohc = 1.0
       cihc = 1.0
       species = Int32(1)
-      ihcout = Vector{Cdouble}(zeros((Int64(dur*fs), )))
-      synouttmp = Vector{Cdouble}(zeros((Int64(dur*fs), )))
-      meanrate = Vector{Cdouble}(zeros((Int64(dur*fs), )))
-      varrate = Vector{Cdouble}(zeros((Int64(dur*fs), )))
-      psth = Vector{Cdouble}(zeros((Int64(dur*fs), )))
+      ihcout = zeros(length(px))
+      synouttmp = zeros(length(px))
+      ffGn = zeros(Int(ceil((length(px) + 2 * floor(7500 / (freq / 1e3))) * 1/fs * 10e3)))
+      meanrate = zeros(length(px))
+      varrate = zeros(length(px))
+      psth = zeros(length(px))
 
       AuditoryNerveFiber.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout)
-      AuditoryNerveFiber.SingleAN!(ihcout, cf, nrep, tdres, totalstim, fibertype, noiseType,
+      AuditoryNerveFiber.SingleAN!(ihcout, ffGn, cf, nrep, tdres, totalstim, fibertype, noiseType,
                        implnt, meanrate, varrate, psth)
       true
   end
@@ -118,15 +122,15 @@ end
 @testset "Wrappers: check callable" begin
     # Check if the wrapper can be evaluated
     @test begin
-        sim_ihc_zbc2014(zeros((Int(dur*fs), )), freq)
+        sim_ihc_zbc2014(zeros(Int(dur*fs)), freq)
         true
     end
     @test begin
-        sim_synapse_zbc2014(zeros((Int(dur*fs), )), freq)
+        sim_synapse_zbc2014(zeros(Int(dur*fs)), freq)
         true
     end
     @test begin
-        sim_an_zbc2014(zeros((Int(dur*fs), )), freq)
+        sim_an_zbc2014(zeros(Int(dur*fs)), freq)
         true
     end
 end
@@ -136,10 +140,10 @@ end
     # Check that calling with n_rep > 1 produces expected results (cloning and tiling of response along primary axis)
     # Note that we need to zero-pad the inputs, otherwise responses will trail over?
     @test begin
-        output_single = sim_ihc_zbc2014([zeros(2000); pt; zeros(2000)], freq)
-        output_multiple = sim_ihc_zbc2014([zeros(2000); pt; zeros(2000)], freq; n_rep=2)
-        first_repeat = all(abs.(output_single - output_multiple[1:14000]) .< tol)
-        second_repeat = all(abs.(output_single - output_multiple[(1:14000).+14000]) .< tol)
+        output_single = sim_ihc_zbc2014([pt; zeros(20000)], freq)
+        output_multiple = sim_ihc_zbc2014([pt; zeros(20000)], freq; n_rep=2)
+        first_repeat = all(abs.(output_single[1:10000] - output_multiple[1:10000]) .< tol)
+        second_repeat = all(abs.(output_single[1:10000] - output_multiple[(1:10000) .+ 30000]) .< tol)
     end
     # Check that inner hair cell response shows expected hallmarks (response to sinusoid at CF, partial rectification)
     @test begin
@@ -196,7 +200,6 @@ end
 
 # Next we test that n_rep is handled appropriately
 @testset "Wrappers: check n_rep handling" begin
-
     # Verify that sim_ihc_zbc2014 handles varying n_rep and returns correct lengths
     @test begin
         results = map(1:5:100) do n_rep
@@ -224,7 +227,7 @@ end
     # Verify that sim_anrate_zbc2014 handles varying n_rep and returns correct lengths
     @test begin
         results = map(1:5:100) do n_rep
-            return length(sim_anrate_zbc2014(sim_ihc_zbc2014(pt, 1000.0; n_rep=n_rep), 1000.0; n_rep=n_rep)) == (length(pt))
+            return length(sim_anrate_zbc2014(sim_ihc_zbc2014(pt, 1000.0; n_rep=n_rep), 1000.0; n_rep=n_rep)) == (length(pt) * n_rep)
         end
         all(results)
     end
@@ -236,5 +239,14 @@ end
         end
         all(results)
     end
+end
 
+# Next, we will check that fractional Gaussian noise produces randomness in synaptic outputs
+@testset "Behavior: fractional Gaussian noise" begin
+    # Verify that if we request fGn that responses are random
+	  @test begin
+	      x1 = sim_anrate_zbc2014(zeros(10000), 1000.0; fractional=true)
+	      x2 = sim_anrate_zbc2014(zeros(10000), 1000.0; fractional=true)
+        sum(abs.(x1 .- x2)) > tol
+    end
 end

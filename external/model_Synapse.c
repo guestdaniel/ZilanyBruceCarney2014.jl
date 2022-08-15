@@ -77,10 +77,10 @@
 #define __min(a,b) (((a) < (b))? (a): (b))
 #endif
 
-void SingleAN(double *px, double cf, int nrep, double tdres, int totalstim,
+void SingleAN(double *px, double *randNums, double cf, int nrep, double tdres, int totalstim,
               double fibertype, double noiseType, double implnt, double *meanrate,
               double *varrate, double *psth, 
-              double *(*ffGn)(int, double, double, double, double),
+//              double *(*ffGn)(int, double, double, double, double),
               double *(*decimate)(double *, int, int),
               double *(*random_numbers)(int))
 {
@@ -92,8 +92,8 @@ void SingleAN(double *px, double cf, int nrep, double tdres, int totalstim,
   double sampFreq = 10e3; /* Sampling frequency used in the synapse */
 
   /* Declarations of the functions used in the program */
-  double Synapse(double *, double, double, int, int, double, double, double, double, double *, 
-                 double *(*)(int, double, double, double, double), 
+  double Synapse(double *, double *, double, double, int, int, double, double, double, double, double *,
+//                 double *(*)(int, double, double, double, double),
                  double *(*)(double *, int, int));
 	int SpikeGenerator(double *, double, int, int, double *, double *(*)(int));
 
@@ -107,7 +107,8 @@ void SingleAN(double *px, double cf, int nrep, double tdres, int totalstim,
   if (fibertype==3) spont = 100.0;
 
   /*====== Run the synapse model ======*/
-  I = Synapse(px, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp, ffGn, decimate);
+  I = Synapse(px, randNums, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp, decimate);
+//  I = Synapse(px, tdres, cf, totalstim, nrep, spont, noiseType, implnt, sampFreq, synouttmp,  decimate);
 
   /* Wrapping up the unfolded (due to no. of repetitions) Synapse Output */
   for(i = 0; i<I ; i++)
@@ -140,10 +141,10 @@ void SingleAN(double *px, double cf, int nrep, double tdres, int totalstim,
    the immediate pool could be as low as negative, at this time there is an alert message
    print out and the concentration is set at saturated level  */
 /* --------------------------------------------------------------------------------------------*/
-double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
+double Synapse(double *ihcout, double *randNums, double tdres, double cf, int totalstim, int nrep,
                double spont, double noiseType, double implnt, double sampFreq,
-               double *synouttmp, double *(*ffGn)(int, double, double, double, double), 
-               double*(*decimate)(double *, int, int))
+//               double *synouttmp, double *(*ffGn)(int, double, double, double, double),
+               double *synouttmp, double*(*decimate)(double *, int, int))
 {
   /* Initalize Variables */
   int z, b;
@@ -163,7 +164,7 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
   double *m1, *m2, *m3, *m4, *m5;
   double *n1, *n2, *n3;
 
-  double *randNums;
+//  double *randNums;
   double *sampIHC, *ihcDims;
 
   exponOut = (double*)calloc((long) ceil(totalstim*nrep),sizeof(double));
@@ -182,6 +183,7 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
   n1 = (double*)calloc((long) ceil((totalstim*nrep+2*delaypoint)*tdres*sampFreq),sizeof(double));
   n2 = (double*)calloc((long) ceil((totalstim*nrep+2*delaypoint)*tdres*sampFreq),sizeof(double));
   n3 = (double*)calloc((long) ceil((totalstim*nrep+2*delaypoint)*tdres*sampFreq),sizeof(double));
+//  randNums = (double*)calloc((long) ceil((totalstim*nrep+2*delaypoint)*tdres*sampFreq),sizeof(double));
 
   /*----------------------------------------------------------*/
   /*------- Parameters of the Power-law function -------------*/
@@ -193,7 +195,13 @@ double Synapse(double *ihcout, double tdres, double cf, int totalstim, int nrep,
   /*----------------------------------------------------------*/
   /*------- Generating a random sequence ---------------------*/
   /*----------------------------------------------------------*/
-  randNums = ffGn((int)ceil((totalstim * nrep + 2 * delaypoint) * tdres * sampFreq), 1 / sampFreq, 0.9, noiseType, spont);
+//  randNums = ffGn((int)ceil((totalstim * nrep + 2 * delaypoint) * tdres * sampFreq), 1 / sampFreq, 0.9, noiseType, spont);
+//
+//    for (indx = 0; indx < floor((totalstim * nrep + 2 * delaypoint) *
+//                              tdres * sampFreq);
+//        indx++) {
+//      randNums[indx] = 0.0;
+//    }
 
   /*----------------------------------------------------------*/
   /*----- Double Exponential Adaptation ----------------------*/
