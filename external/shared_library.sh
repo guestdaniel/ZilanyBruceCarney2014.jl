@@ -7,4 +7,4 @@ gcc -c -Wall -fPIC -O3 model_Synapse.c
 gcc -c -Wall -fPIC -O3 complex.c 
 
 # Step 2: Compile everything together into a shared library object
-gcc -shared -o libihc.so model_IHC.o model_Synapse.o complex.o
+gcc -shared -o libzbc2014.so model_IHC.o model_Synapse.o complex.o

@@ -15,9 +15,8 @@ using DSP
 # Declare various constants that hold across all tests in this file
 fs = 100e3
 dur = 0.1
-freq = 1000.0
-pt = scale_dbspl(pure_tone(freq, 0.0, dur, fs), 50.0)
-pt_up = scale_dbspl(pure_tone(freq, 0.0, dur, fs*5), 50.0)[1:50000]
+pt = scale_dbspl(pure_tone(1000.0, 0.0, dur, fs), 50.0)
+pt_up = scale_dbspl(pure_tone(1000.0, 0.0, dur, fs*5), 50.0)[1:50000]
 tol = 1e-3  # absolute tolerance on comparisons of approximate equality
 
 # Test ffGn
@@ -53,7 +52,7 @@ end
   # First, we try testing the direct C binding to the IHC code (IHCAN!)
   @test begin
       px = pt
-      cf = freq
+      cf = 1000.0
       nrep = Int32(1)
       tdres = 1.0/fs
       totalstim = Int32(dur*fs)
@@ -68,9 +67,9 @@ end
   # Next, we try testing the direct C binding to the Synapse code (Synapse!)
   @test begin
       px = pt
-      ffGn = zeros(Int(ceil((length(px) + 2 * floor(7500 / (freq / 1e3))) * 1/fs * 10e3)))
+      ffGn = zeros(Int(ceil((length(px) + 2 * floor(7500 / (1000.0 / 1e3))) * 1/fs * 10e3)))
       tdres = 1.0/fs
-      cf = freq
+      cf = 1000.0
       totalstim = Int32(dur*fs)
       nrep = Int32(1)
       spont = 100.0
@@ -91,9 +90,9 @@ end
 
   # Finally, we try testing the direct C binding to the SingleAN!() function
   @test begin
-      px = scale_dbspl(pure_tone(freq, 0.0, dur, fs), 50.0)
+      px = scale_dbspl(pure_tone(1000.0, 0.0, dur, fs), 50.0)
       tdres = 1.0/fs
-      cf = freq
+      cf = 1000.0
       totalstim = Int32(dur*fs)
       nrep = Int32(1)
       spont = 100.0
@@ -106,7 +105,7 @@ end
       species = Int32(1)
       ihcout = zeros(length(px))
       synouttmp = zeros(length(px))
-      ffGn = zeros(Int(ceil((length(px) + 2 * floor(7500 / (freq / 1e3))) * 1/fs * 10e3)))
+      ffGn = zeros(Int(ceil((length(px) + 2 * floor(7500 / (1000.0 / 1e3))) * 1/fs * 10e3)))
       meanrate = zeros(length(px))
       varrate = zeros(length(px))
       psth = zeros(length(px))
@@ -122,15 +121,15 @@ end
 @testset "Wrappers: check callable" begin
     # Check if the wrapper can be evaluated
     @test begin
-        sim_ihc_zbc2014(zeros(Int(dur*fs)), freq)
+        sim_ihc_zbc2014(zeros(Int(dur*fs)), 1000.0)
         true
     end
     @test begin
-        sim_synapse_zbc2014(zeros(Int(dur*fs)), freq)
+        sim_synapse_zbc2014(zeros(Int(dur*fs)), 1000.0)
         true
     end
     @test begin
-        sim_an_zbc2014(zeros(Int(dur*fs)), freq)
+        sim_an_zbc2014(zeros(Int(dur*fs)), 1000.0)
         true
     end
 end
@@ -140,14 +139,14 @@ end
     # Check that calling with n_rep > 1 produces expected results (cloning and tiling of response along primary axis)
     # Note that we need to zero-pad the inputs, otherwise responses will trail over?
     @test begin
-        output_single = sim_ihc_zbc2014([pt; zeros(20000)], freq)
-        output_multiple = sim_ihc_zbc2014([pt; zeros(20000)], freq; n_rep=2)
+        output_single = sim_ihc_zbc2014([pt; zeros(20000)], 1000.0)
+        output_multiple = sim_ihc_zbc2014([pt; zeros(20000)], 1000.0; n_rep=2)
         first_repeat = all(abs.(output_single[1:10000] - output_multiple[1:10000]) .< tol)
         second_repeat = all(abs.(output_single[1:10000] - output_multiple[(1:10000) .+ 30000]) .< tol)
     end
     # Check that inner hair cell response shows expected hallmarks (response to sinusoid at CF, partial rectification)
     @test begin
-        output = sim_ihc_zbc2014(pt, freq)
+        output = sim_ihc_zbc2014(pt, 1000.0)
         # Check that
         #1 at least one element is non-zero,
         #2 minima is smaller abs val than maxima (consistent with partial rectification in IHC)
@@ -155,26 +154,26 @@ end
     end
     # Check that each output of auditory nerve response is present and non-zero
     @test begin
-        outs = sim_an_zbc2014(sim_ihc_zbc2014(pt, freq), freq)
+        outs = sim_an_zbc2014(sim_ihc_zbc2014(pt, 1000.0), 1000.0)
         (sum(outs[1]) != 0) && (sum(outs[2]) != 0) && (sum(outs[3]) != 0)
     end
     # Check that auditory nerve response shows expected pattern of results with changing spontaneous rate
     @test begin
         # Check analytic firing rates
         (low, medium, high) = 
-            map(fiber_type -> mean(sim_an_zbc2014(sim_ihc_zbc2014(pt, freq), freq; fiber_type=fiber_type)[1]), ["low", "medium", "high"])
+            map(fiber_type -> mean(sim_an_zbc2014(sim_ihc_zbc2014(pt, 1000.0), 1000.0; fiber_type=fiber_type)[1]), ["low", "medium", "high"])
         analytic = (low < medium < high)
         # Check spiking firing rate (note that this approach is not great because it's stochastic and could fail randomly)
         (low, medium, high) = 
-            map(fiber_type -> mean(sim_an_zbc2014(sim_ihc_zbc2014(pt, freq), freq; fiber_type=fiber_type)[3]), ["low", "medium", "high"])
+            map(fiber_type -> mean(sim_an_zbc2014(sim_ihc_zbc2014(pt, 1000.0), 1000.0; fiber_type=fiber_type)[3]), ["low", "medium", "high"])
         spiking = (low < medium < high)
         analytic && spiking
     end
     # Check that auditory nerve shows reasonable rate-level function (e.g., range from 10 to 30 dB is constantly increasing)
     @test begin
         inputs = [scale_dbspl(pt, level) for level in [10.0, 15.0, 20.0, 25.0, 30.0]]
-        ihcouts = [sim_ihc_zbc2014(input, freq) for input in inputs]
-        outputs = [sim_an_zbc2014(ihcout, freq)[1] for ihcout in ihcouts]
+        ihcouts = [sim_ihc_zbc2014(input, 1000.0) for input in inputs]
+        outputs = [sim_an_zbc2014(ihcout, 1000.0)[1] for ihcout in ihcouts]
         means = map(Statistics.mean, outputs)
         means[5] > means[4] > means[3] > means[2] > means[1]
     end
@@ -182,19 +181,19 @@ end
     @test begin
         cfs = LogRange(200.0, 5000.0, 40)
         tuning_curve = map(cf -> mean(sim_ihc_zbc2014(pt, cf)), cfs)
-        abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
+        abs(cfs[findmax(tuning_curve)[2]] - 1000.0) < 500
     end
     # Check that synapse shows reasonable frequency tuning
     @test begin
         cfs = LogRange(200.0, 5000.0, 40)
         tuning_curve = map(cf -> mean(sim_synapse_zbc2014(sim_ihc_zbc2014(pt, cf), cf)), cfs)
-        abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
+        abs(cfs[findmax(tuning_curve)[2]] - 1000.0) < 500
     end
     # Check that auditory nerve shows reasonable frequency tuning
     @test begin
         cfs = LogRange(200.0, 5000.0, 40)
         tuning_curve = map(cf -> mean(sim_an_zbc2014(sim_ihc_zbc2014(pt, cf), cf)[1]), cfs)
-        abs(cfs[findmax(tuning_curve)[2]] - freq) < 500
+        abs(cfs[findmax(tuning_curve)[2]] - 1000.0) < 500
     end
 end
 
