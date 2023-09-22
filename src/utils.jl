@@ -121,13 +121,15 @@ https://www.urmc.rochester.edu/labs/carney/publications-code/auditory-models.asp
 - `Hinput::Float64`: Hurst index. For 0 < H <= 1, we synthesize fractional Gaussian noise with Hurst index H. For 1 < H <= 2, we synthesize fractional Brownian motion with Hurst index H-1.
 - `noiseType::Float64`: If noiseType == 0, we return zeros, else we return fractional Gaussian noise
 - `mu::Float64`: Mean of the noise
+- `sigma::Float64`: The variance of the noise
 """
 function ffGn_native(
     N::Int64,
     tdres::Float64,
     Hinput::Float64,
     noiseType::Float64,
-    mu::Float64;
+    mu::Float64,
+    sigma::Float64;
     safety::Int64=4
 )
     # Start by handling noiseType
@@ -181,18 +183,26 @@ function ffGn_native(
     # Resample to match AN model
     y = upsample(y, resamp)
 
-    # Handle mu and sigma
-    if mu < 0.5
-        sigma = 3.0
-    elseif mu < 18.0
-        sigma = 30.0
-    else
-        sigma = 200.0
-    end
     y = sigma .* y
 
     # Return
     return y[1:nop]
+end
+
+function ffGn_native(
+    N::Int64,
+    tdres::Float64,
+    Hinput::Float64,
+    noiseType::Float64,
+    mu::Float64;
+)
+    if mu == 100.0
+        ffGn_native(N, tdres, Hinput, noiseType, mu, 200.0)
+    elseif mu == 5.0
+        ffGn_native(N, tdres, Hinput, noiseType, mu, 30.0)
+    elseif mu == 0.1
+        ffGn_native(N, tdres, Hinput, noiseType, mu, 3.0)
+    end
 end
 
 

@@ -4,7 +4,8 @@ using DSP
 using FFTW
 #using libzbc2014_jll
 #const libzbc2014 = "/home/daniel/AuditoryNerveFiber.jl/external/libzbc2014.so"
-const libzbc2014 = joinpath(splitpath(Base.current_project())[1:(end-1)]..., "external", "libzbc2014.so")
+#const libzbc2014 = joinpath(splitpath(Base.current_project())[1:(end-1)]..., "external", "libzbc2014.so")
+const libzbc2014 = "C:\\Users\\dguest2\\AuditoryNerveFiber.jl\\external\\libzbc2014.so"
 
 export sim_ihc_zbc2014, sim_ihc_zbc2014!,
        sim_synapse_zbc2014, sim_synapse_zbc2014!,
