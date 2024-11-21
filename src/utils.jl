@@ -202,6 +202,8 @@ function ffGn_native(
         ffGn_native(N, tdres, Hinput, noiseType, mu, 30.0)
     elseif mu == 0.1
         ffGn_native(N, tdres, Hinput, noiseType, mu, 3.0)
+    else
+        error("The specified mu parameter is not recognized, must be 100, 5, or 0.1!")
     end
 end
 

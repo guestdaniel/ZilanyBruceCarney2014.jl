@@ -2,15 +2,13 @@ module AuditoryNerveFiber
 
 using DSP
 using FFTW
-#using libzbc2014_jll
-#const libzbc2014 = "/home/daniel/AuditoryNerveFiber.jl/external/libzbc2014.so"
-#const libzbc2014 = joinpath(splitpath(Base.current_project())[1:(end-1)]..., "external", "libzbc2014.so")
 const libzbc2014 = "C:\\Users\\dguest2\\AuditoryNerveFiber.jl\\external\\libzbc2014.so"
 
 export sim_ihc_zbc2014, sim_ihc_zbc2014!,
        sim_synapse_zbc2014, sim_synapse_zbc2014!,
        sim_anrate_zbc2014, sim_anrate_zbc2014!,
-       sim_an_zbc2014, sim_spikes_zbc2014
+       sim_an_zbc2014, sim_spikes_zbc2014,
+       sim_ihcall_zbc2014
 
 include("utils.jl")
 
@@ -41,11 +39,15 @@ function sim_ihc_zbc2014(
     n_rep::Int64=1
 )
     # Create empty array for output
-    output = zeros(length(input)*n_rep)
+    ihcout = zeros(length(input)*n_rep)
+    c1out = zeros(length(input)*n_rep)
+    c2out = zeros(length(input)*n_rep)
 
     # Call in-place version function
     sim_ihc_zbc2014!(
-        output,
+        ihcout,
+        c1out,
+        c2out,
         input,
         cf;
         fs=fs,
@@ -56,11 +58,63 @@ function sim_ihc_zbc2014(
     )
 
     # Return
-    return output
+    return ihcout
 end
 
+"""
+    sim_ihcall_zbc2014(input, cf; fs=100e3, cohc=1.0, cihc=1.0, species="human", n_rep=1)
+
+Simulates inner hair cell potential for given acoustic input.
+
+# Arguments
+- `input::Vector{Float64}`: sound pressure waveform in pascals
+- `cf::Float64`: characteristic frequency of the IHC in Hz
+- `fs::Float64`: sampling rate in Hz
+- `cohc::Float64`: outer hair cell survival (from 0 to 1)
+- `cihc::Float64`: inner hair cell survival (from 0 to 1)
+- `species::String`: species, either ("cat" = cat, "human" = humans with Shera tuning, "human_glasberg" = humans with Glasberg tuning)
+- `n_rep::Int64`: how many repetitions to perform. Because the inner hair cell stage has no randomness, `n_rep` > 1 simply concatenates `n_rep` copies of IHC simulation and returns 
+
+# Returns
+- `output::Vector{Float64}`: inner hair cell potential output, size of `length(input)*n_rep`
+"""
+function sim_ihcall_zbc2014(
+    input::AbstractVector{Float64},
+    cf::Float64; 
+    fs::Float64=100e3,
+    cohc::Float64=1.0, 
+    cihc::Float64=1.0, 
+    species::String="human",
+    n_rep::Int64=1
+)
+    # Create empty array for output
+    ihcout = zeros(length(input)*n_rep)
+    c1out = zeros(length(input)*n_rep)
+    c2out = zeros(length(input)*n_rep)
+
+    # Call in-place version function
+    sim_ihc_zbc2014!(
+        ihcout,
+        c1out,
+        c2out,
+        input,
+        cf;
+        fs=fs,
+        cohc=cohc,
+        cihc=cihc,
+        species=species,
+        n_rep=n_rep
+    )
+
+    # Return
+    return ihcout, c1out, c2out
+end
+
+
 function sim_ihc_zbc2014!(
-    output::AbstractVector{Float64},
+    ihcout::AbstractVector{Float64},
+    c1out::AbstractVector{Float64},
+    c2out::AbstractVector{Float64},
     input::AbstractVector{Float64},
     cf::Float64;
     fs::Float64=100e3,
@@ -86,7 +140,9 @@ function sim_ihc_zbc2014!(
         cohc,
         cihc,
         Int32(species_flag),
-        output
+        ihcout,
+        c1out,
+        c2out
     )
 end
 
@@ -334,8 +390,8 @@ function sim_an_zbc2014!(
 )
     # Calculate totalstim based on size of input
     totalstim = Int64(length(input)/n_rep)
-    # Map fiber type string to float code expected by Synapse!
-    spont = Dict([("low", 0.1), ("medium", 4.0), ("high", 100.0)])[fiber_type]
+    # Map fiber type string to float code expected by Synapse!/ffgN
+    spont = Dict([("low", 0.1), ("medium", 5.0), ("high", 100.0)])[fiber_type]
     # Map fiber type string to float code expected by Synapse!
     fibertype = Dict([("low", 1.0), ("medium", 2.0), ("high", 3.0)])[fiber_type]
     # Map power-law implementation type to float code expected by Syanpse!
@@ -378,6 +434,8 @@ Julia, there are no sanity checks on any arguments.
 - `cihc::Float64`: inner hair cell survival (from 0 to 1)
 - `species::Int32`: species, either (1 = cat, 2 = humans with Shera tuning, 3 = humans with Glasberg tuning)
 - `ihcout::Vector{Float64}`: array of same size as `px`, used to store output from C
+- `c1out::Vector{Float64}`: array of same size as `px`, used to store output from C
+- `c2out::Vector{Float64}`: array of same size as `px`, used to store output from C
 """
 function IHCAN!(
     px::Vector{Float64}, 
@@ -388,7 +446,9 @@ function IHCAN!(
     cohc::Float64, 
     cihc::Float64, 
     species::Int32,
-    ihcout::Vector{Float64}
+    ihcout::Vector{Float64},
+    c1out::Vector{Float64},
+    c2out::Vector{Float64},
 )
     ccall(
             (:IHCAN, libzbc2014),    # function call
@@ -402,9 +462,11 @@ function IHCAN!(
                 Cdouble,             # cohc
                 Cdouble,             # cihc
                 Cint,                # species
-                Ptr{Cdouble}         # ihcout
+                Ptr{Cdouble},        # ihcout
+                Ptr{Cdouble},        # c1out
+                Ptr{Cdouble},        # c2out
             ),
-            px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout  # pass arguments
+            px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, c1out, c2out  # pass arguments
         )
 end
 

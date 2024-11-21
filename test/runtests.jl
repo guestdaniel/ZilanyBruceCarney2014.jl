@@ -23,19 +23,19 @@ tol = 1e-3  # absolute tolerance on comparisons of approximate equality
 @testset "Fractional Gaussian noise" begin
     # Test that we can call the function
     @test begin
-        sample = AuditoryNerveFiber.ffGn_native(10000, 1/fs, 0.75, 0.0, 1.0)
+        sample = AuditoryNerveFiber.ffGn_native(10000, 1/fs, 0.75, 0.0, 0.1)
         isapprox(sample, zeros(10000))
     end
     # Test that the noiseType switch behaves as expect
     @test begin
-        sample = AuditoryNerveFiber.ffGn_native(10000, 1/fs, 0.75, 1.0, 1.0)
+        sample = AuditoryNerveFiber.ffGn_native(10000, 1/fs, 0.75, 1.0, 0.1)
         var(sample) > 0.0
     end
     # Test that raising the mean to the branch points in the code (0.5, 18.0
     # results in corresponding changes in output variance
     @test begin
-        myfunc(mu) = std(AuditoryNerveFiber.ffGn_native(100000, 1/fs, 0.75, 1.0, mu))
-        vars = map(myfunc, [0.4, 10.0, 20.0])
+        myfunc(mu) = var(AuditoryNerveFiber.ffGn_native(100000, 1/fs, 0.75, 1.0, mu))
+        vars = map(myfunc, [0.1, 5.0, 100.0])
         vars[1] < vars[2] < vars[3]
     end
 end
@@ -60,7 +60,9 @@ end
       cihc = 1.0
       species = Int32(1)
       ihcout = Vector{Cdouble}(zeros((Int64(dur*fs), )))
-      AuditoryNerveFiber.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout)
+      c1out = Vector{Cdouble}(zeros((Int64(dur*fs), )))
+      c2out = Vector{Cdouble}(zeros((Int64(dur*fs), )))
+      AuditoryNerveFiber.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, c1out, c2out)
       true
   end
 
@@ -80,9 +82,11 @@ end
       cihc = 1.0
       species = Int32(1)
       ihcout = zeros(length(px))
+      c1out = zeros(length(px))
+      c2out = zeros(length(px))
       synouttmp = zeros(length(px))
 
-      AuditoryNerveFiber.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout)
+      AuditoryNerveFiber.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, c1out, c2out)
       AuditoryNerveFiber.Synapse!(ihcout, ffGn, tdres, cf, totalstim, nrep, spont, noiseType, implnt,
                        sampFreq, synouttmp)
       true
@@ -105,12 +109,14 @@ end
       species = Int32(1)
       ihcout = zeros(length(px))
       synouttmp = zeros(length(px))
+      c1out = zeros(length(px))
+      c2out = zeros(length(px))
       ffGn = zeros(Int(ceil((length(px) + 2 * floor(7500 / (1000.0 / 1e3))) * 1/fs * 10e3)))
       meanrate = zeros(length(px))
       varrate = zeros(length(px))
       psth = zeros(length(px))
 
-      AuditoryNerveFiber.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout)
+      AuditoryNerveFiber.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, c1out, c2out)
       AuditoryNerveFiber.SingleAN!(ihcout, ffGn, cf, nrep, tdres, totalstim, fibertype, noiseType,
                        implnt, meanrate, varrate, psth)
       true
