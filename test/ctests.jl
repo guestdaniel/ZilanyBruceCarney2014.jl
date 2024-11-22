@@ -1,6 +1,6 @@
 using Test
 
-const libihc = "/home/daniel/AuditoryNerveFiber.jl/external/libihc.so"
+const libihc = "/home/daniel/ZilanyBruceCarney2014.jl/external/libihc.so"
 
 """
     edit_one_element_of_c_array(a)

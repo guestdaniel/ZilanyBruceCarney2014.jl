@@ -1,6 +1,6 @@
-# AuditoryNerveFiber.jl
+# ZilanyBruceCarney2014.jl
 
-AuditoryNerveFiber.jl is a Julia package that provides access to auditory-nerve models in Julia. 
+ZilanyBruceCarney2014.jl is a Julia package that provides access to auditory-nerve models in Julia. 
 Presently, this package provides access to the Zilany, Bruce, and Carney (2014) auditory-nerve model. 
 
 ## Why a new package? Why Julia?
@@ -12,7 +12,7 @@ This package was written in Julia to supplement existing packages and leverage s
 
 ## Implemented models
 
-Presently, AuditoryNerveFiber.jl provides access to:
+Presently, ZilanyBruceCarney2014.jl provides access to:
 - Zilany, M. S. A., Bruce, I. C., & Carney, L. H. (2014). Updated parameters and
 expanded simulation options for a model of the auditory periphery. The Journal
 of the Acoustical Society of America, 135(1), 283–286.
@@ -21,15 +21,15 @@ http://dx.doi.org/10.1121/1.4837815
 More models to come soon!
 
 # Installation
-In this early version of AuditoryNerveFiber.jl, installation unfortunately relies on some manual steps (this will be improved soon).
+In this early version of ZilanyBruceCarney2014.jl, installation unfortunately relies on some manual steps (this will be improved soon).
 Follow the steps below and reach out if you have any questions:
-1. To install AuditoryNerveFiber.jl, clone the repository from GitHub, either from the download link on the GitHub page or with the following CLI git command:
+1. To install ZilanyBruceCarney2014.jl, clone the repository from GitHub, either from the download link on the GitHub page or with the following CLI git command:
 ```
-git clone git@github.com/guestdaniel/AuditoryNerveFiber.jl
+git clone git@github.com/guestdaniel/ZilanyBruceCarney2014.jl
 ```
 2. Navigate to wherever you cloned the repository and execute the compilation script `external/shared_library.sh`. 
 Note that you will need to have `gcc` installed, or modify the script to suit your installed C compiler.
-3. Use a text editor or your IDE to modify line 5 of `src/AuditoryNerveFiber.jl` to point to your copy of `libzcb2014.so`, which should be in the same folder as the compilation script (assuming that the script executed successfully). 
+3. Use a text editor or your IDE to modify line 5 of `src/ZilanyBruceCarney2014.jl` to point to your copy of `libzcb2014.so`, which should be in the same folder as the compilation script (assuming that the script executed successfully). 
 This is an unfortunate manual step that we are working to eliminate from the install process!
 4. From whatever Julia envronment you want to use the package, activate the package REPL (press `]` in the regular REPL) and install with:
 ```
@@ -44,7 +44,7 @@ Currently, two "levels" of functions are provided.
 # Testing
 Many basic response properties of the auditory-nerve simulations (e.g., responses grow in response in increasing sound level) are tested in `test/runtests.jl`. 
 If you want to run these tests yourself, follow these steps:
-- Clone the repository (`git clone git@github.com:guestdaniel/AuditoryNerveFiber.jl`)
+- Clone the repository (`git clone git@github.com:guestdaniel/ZilanyBruceCarney2014.jl`)
 - Change directory to the repository 
 - Open a Julia REPL
 - Switch to the Pkg REPL (press `]` on your keyboard)
@@ -61,7 +61,7 @@ Development of this package was supported by the following funding resources at 
 
 # License and acknowledgments
 
-The Julia code in AuditoryNerveFiber.jl is licensed under the [GNU AGPL v3 license](https://www.gnu.org/licenses/agpl-3.0.en.html). 
+The Julia code in ZilanyBruceCarney2014.jl is licensed under the [GNU AGPL v3 license](https://www.gnu.org/licenses/agpl-3.0.en.html). 
 The C code included in this repository can be downloaded by users and compiled per the instructions provided above.
 Modification, redistribution, or reuse of the C code requires written permission from the original authors, listed below:
 - Muhammad S. A. Zilany

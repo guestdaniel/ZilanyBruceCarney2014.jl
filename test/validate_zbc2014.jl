@@ -10,7 +10,7 @@ end
     Pkg.activate(Base.current_project())
 end
 @everwhere begin
-    using AuditoryNerveFiber
+    using ZilanyBruceCarney2014
     using AuditorySignalUtils
     using Statistics
 end
@@ -64,7 +64,7 @@ function zilanyetal2014_figure1(;
     Colorbar(fig[1, 2], hm)
 
     # Save figure
-    save("/home/daniel/AuditoryNerveFiber.jl/test/outputs/zilanyetal2014_figure1.png", fig)
+    save("/home/daniel/ZilanyBruceCarney2014.jl/test/outputs/zilanyetal2014_figure1.png", fig)
 end
 zilanyetal2014_figure1()
 
@@ -102,7 +102,7 @@ function zilanyetal2009_figure3(
     hist!(ax, results; color=:black, bins=120)
 
     # Save figure
-    save("/home/daniel/AuditoryNerveFiber.jl/test/outputs/zilanyetal2009_figure3.png", fig)
+    save("/home/daniel/ZilanyBruceCarney2014.jl/test/outputs/zilanyetal2009_figure3.png", fig)
 end
 
 zilanyetal2009_figure4()
@@ -154,7 +154,7 @@ function zilanyetal2009_figure4(
     axislegend(ax, lns, string.(durations); position=:rt)
 
     # Save figure
-    save("/home/daniel/AuditoryNerveFiber.jl/test/outputs/zilanyetal2009_figure4.png", fig)
+    save("/home/daniel/ZilanyBruceCarney2014.jl/test/outputs/zilanyetal2009_figure4.png", fig)
 end
 
 zilanyetal2009_figure4()

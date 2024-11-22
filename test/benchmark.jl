@@ -1,7 +1,7 @@
 using BenchmarkTools
 using Profile
-using AuditoryNerveFiber
-const ANF = AuditoryNerveFiber
+using ZilanyBruceCarney2014
+const ANF = ZilanyBruceCarney2014
 using AuditorySignalUtils
 const ASU = AuditorySignalUtils
 

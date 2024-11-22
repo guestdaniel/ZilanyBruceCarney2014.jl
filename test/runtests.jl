@@ -7,7 +7,7 @@ are tested [visually] elsewhere).
 """
 
 using Test
-using AuditoryNerveFiber
+using ZilanyBruceCarney2014
 using AuditorySignalUtils
 using Statistics
 using DSP
@@ -23,18 +23,18 @@ tol = 1e-3  # absolute tolerance on comparisons of approximate equality
 @testset "Fractional Gaussian noise" begin
     # Test that we can call the function
     @test begin
-        sample = AuditoryNerveFiber.ffGn_native(10000, 1/fs, 0.75, 0.0, 0.1)
+        sample = ZilanyBruceCarney2014.ffGn_native(10000, 1/fs, 0.75, 0.0, 0.1)
         isapprox(sample, zeros(10000))
     end
     # Test that the noiseType switch behaves as expect
     @test begin
-        sample = AuditoryNerveFiber.ffGn_native(10000, 1/fs, 0.75, 1.0, 0.1)
+        sample = ZilanyBruceCarney2014.ffGn_native(10000, 1/fs, 0.75, 1.0, 0.1)
         var(sample) > 0.0
     end
     # Test that raising the mean to the branch points in the code (0.5, 18.0
     # results in corresponding changes in output variance
     @test begin
-        myfunc(mu) = var(AuditoryNerveFiber.ffGn_native(100000, 1/fs, 0.75, 1.0, mu))
+        myfunc(mu) = var(ZilanyBruceCarney2014.ffGn_native(100000, 1/fs, 0.75, 1.0, mu))
         vars = map(myfunc, [0.1, 5.0, 100.0])
         vars[1] < vars[2] < vars[3]
     end
@@ -43,7 +43,7 @@ end
 # Test upsampling function by upsampling pure tone and then verifying that points
 # corresponding to original sample points match
 @test begin
-    pt_upsampled = AuditoryNerveFiber.upsample(pt, 5)
+    pt_upsampled = ZilanyBruceCarney2014.upsample(pt, 5)
     maximum(abs.(pt_upsampled - pt_up)) < tol
 end
 
@@ -62,7 +62,7 @@ end
       ihcout = Vector{Cdouble}(zeros((Int64(dur*fs), )))
       c1out = Vector{Cdouble}(zeros((Int64(dur*fs), )))
       c2out = Vector{Cdouble}(zeros((Int64(dur*fs), )))
-      AuditoryNerveFiber.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, c1out, c2out)
+      ZilanyBruceCarney2014.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, c1out, c2out)
       true
   end
 
@@ -86,8 +86,8 @@ end
       c2out = zeros(length(px))
       synouttmp = zeros(length(px))
 
-      AuditoryNerveFiber.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, c1out, c2out)
-      AuditoryNerveFiber.Synapse!(ihcout, ffGn, tdres, cf, totalstim, nrep, spont, noiseType, implnt,
+      ZilanyBruceCarney2014.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, c1out, c2out)
+      ZilanyBruceCarney2014.Synapse!(ihcout, ffGn, tdres, cf, totalstim, nrep, spont, noiseType, implnt,
                        sampFreq, synouttmp)
       true
   end
@@ -116,8 +116,8 @@ end
       varrate = zeros(length(px))
       psth = zeros(length(px))
 
-      AuditoryNerveFiber.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, c1out, c2out)
-      AuditoryNerveFiber.SingleAN!(ihcout, ffGn, cf, nrep, tdres, totalstim, fibertype, noiseType,
+      ZilanyBruceCarney2014.IHCAN!(px, cf, nrep, tdres, totalstim, cohc, cihc, species, ihcout, c1out, c2out)
+      ZilanyBruceCarney2014.SingleAN!(ihcout, ffGn, cf, nrep, tdres, totalstim, fibertype, noiseType,
                        implnt, meanrate, varrate, psth)
       true
   end

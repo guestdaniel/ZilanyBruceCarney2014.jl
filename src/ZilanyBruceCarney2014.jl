@@ -1,8 +1,8 @@
-module AuditoryNerveFiber
+module ZilanyBruceCarney2014
 
 using DSP
 using FFTW
-const libzbc2014 = "C:\\Users\\dguest2\\AuditoryNerveFiber.jl\\external\\libzbc2014.so"
+const libzbc2014 = "C:\\Users\\dguest2\\ZilanyBruceCarney2014.jl\\external\\libzbc2014.so"
 
 export sim_ihc_zbc2014, sim_ihc_zbc2014!,
        sim_synapse_zbc2014, sim_synapse_zbc2014!,
