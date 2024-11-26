@@ -9,7 +9,7 @@
 # Step 2: Compile everything together into a shared library object
 # gcc -shared -o libzbc2014.so model_IHC.o model_Synapse.o complex.o
 
-clang -c complex.c -o complex.o
-clang -c model_IHC.c -o model_IHC.o
-clang -c model_Synapse.c -o model_Synapse.c
-clang -shared -o libzbc2014.so model_IHC.o model_Synapse.o complex.o
+gcc -c complex.c -o complex.o
+gcc -c model_IHC.c -o model_IHC.o
+gcc -c model_Synapse.c -o model_Synapse.c
+gcc -shared -o libzbc2014.so model_IHC.o model_Synapse.o complex.o
