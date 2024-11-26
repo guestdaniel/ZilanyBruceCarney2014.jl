@@ -35,7 +35,8 @@ cp libzbc2014.lib ${libdir}
 #              supported_platforms()[6],     # Linux i686 (musl)
 #              supported_platforms()[7]]     # Linux i686 (musl)
 
-platforms = [supported_platforms()[[15, 16]]]
+#platforms = supported_platforms()[[1, 2, 6, 7]]
+platforms = supported_platforms()[[15, 16]]
 
 products = [
     LibraryProduct("libzbc2014", :libzbc2014)
