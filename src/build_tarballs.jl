@@ -8,7 +8,7 @@ sources = [
 
 # Build for Linux
 script = raw"""
-cd ${WORKSPACE}/srcdir/external
+cd ${WORKSPACE}/srcdir/ZilanyBruceCarney2014.jl/external
 gcc -c -fPIC complex.c -o complex.o
 gcc -c -fPIC model_IHC.c -o model_IHC.o
 gcc -c -fPIC model_Synapse.c -o model_Synapse.o
@@ -30,4 +30,4 @@ products = [
 
 dependencies = []
 
-build_tarballs(ARGS, name, version, sources, script, platforms, products, dependencies)
+build_tarballs(ARGS, name, version, sources, script, platforms, products, dependencies; julia_compat="1.6")
