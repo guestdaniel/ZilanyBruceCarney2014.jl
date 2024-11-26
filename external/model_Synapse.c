@@ -62,7 +62,7 @@
 #include <math.h>
 #include <time.h>
 
-#include "complex.hpp"
+#include "complex.h"
 
 #define MAXSPIKES 1000000
 #ifndef TWOPI
