@@ -1,7 +1,11 @@
 # ZilanyBruceCarney2014.jl
 
-ZilanyBruceCarney2014.jl is a Julia package that provides access to auditory-nerve models in Julia. 
-Presently, this package provides access to the Zilany, Bruce, and Carney (2014) auditory-nerve model. 
+ZilanyBruceCarney2014.jl is a Julia package that provides access to the Zilany, Bruce, and Carney (2014) auditory auditory-nerve model in Julia. 
+
+```
+Zilany, M. S. A., Bruce, I. C., & Carney, L. H. (2014). Updated parameters and expanded simulation options for a model of the auditory periphery. The Journal of the Acoustical Society of America, 135(1), 283–286.
+http://dx.doi.org/10.1121/1.4837815
+```
 
 ## Why a new package? Why Julia?
 Existing bindings for some models already exist in several Python or MATLAB packages such as [cochlea](https://github.com/mrkrd/cochlea) and [Auditory Modeling Toolbox](https://amtoolbox.org/).
@@ -9,16 +13,6 @@ This package was written in Julia to supplement existing packages and leverage s
 - Interoperability between Julia and C is excellent. Julia has a ["no boilerplate" philosophy](https://docs.julialang.org/en/v1/manual/calling-c-and-fortran-code/) that results in C bindings that are less complicated than those of Python or MATLAB.
 - Julia can be exceptionally fast, but it is still a high-level langauge. This allows us to extend tools and models written in low-level langauges (such as C) using a high-level language (Julia) while avoiding some of the performance penalty usually associated with writing in a high-level language. 
 - Julia has a rapidly developing ecosystem of state-of-the-art packages that could be easily integrated with this package. Examples relevant to those in the auditory modeling field including [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl), [DynamicalSystems.jl](https://github.com/JuliaDynamics/DynamicalSystems.jl), [Flux.jl](https://github.com/FluxML/Flux.jl), and [Turing.jl](https://github.com/TuringLang/Turing.jl). 
-
-## Implemented models
-
-Presently, ZilanyBruceCarney2014.jl provides access to:
-- Zilany, M. S. A., Bruce, I. C., & Carney, L. H. (2014). Updated parameters and
-expanded simulation options for a model of the auditory periphery. The Journal
-of the Acoustical Society of America, 135(1), 283–286.
-http://dx.doi.org/10.1121/1.4837815
-
-More models to come soon!
 
 # Installation
 In this early version of ZilanyBruceCarney2014.jl, installation unfortunately relies on some manual steps (this will be improved soon).
@@ -60,10 +54,8 @@ Development of this package was supported by the following funding resources at 
 - UMN College of Liberal Arts Graduate Fellowship
 
 # License and acknowledgments
-
-The Julia code in ZilanyBruceCarney2014.jl is licensed under the [GNU AGPL v3 license](https://www.gnu.org/licenses/agpl-3.0.en.html). 
-The C code included in this repository can be downloaded by users and compiled per the instructions provided above.
-Modification, redistribution, or reuse of the C code requires written permission from the original authors, listed below:
+This repository is licensed under the [GNU AGPL v3 license](https://www.gnu.org/licenses/agpl-3.0.en.html). 
+The underlying model code is largely the work of:
 - Muhammad S. A. Zilany
 - Ian C. Bruce
 - Laurel H. Carney
