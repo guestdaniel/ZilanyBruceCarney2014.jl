@@ -1,42 +1,29 @@
-using BinaryBuilder
+using BinaryBuilder, Pkg
 
 name = "libzbc2014"
 version = v"0.2.1"
 sources = [
-    DirectorySource("external")
+#    DirectorySource("external")
+     GitSource("https://github.com/guestdaniel/ZilanyBruceCarney2014.jl.git", ""),
 ]
 
 # Build for Linux
 script = raw"""
-cd ${WORKSPACE}/srcdir/
+cd ${WORKSPACE}/srcdir/external
 gcc -c -fPIC complex.c -o complex.o
 gcc -c -fPIC model_IHC.c -o model_IHC.o
 gcc -c -fPIC model_Synapse.c -o model_Synapse.o
-gcc -shared -o libzbc2014.so model_IHC.o model_Synapse.o complex.o
-echo ${libdir}
+gcc -shared -o "libzbc2014.${dlext}" model_IHC.o model_Synapse.o complex.o
 mkdir ${libdir}
-cp libzbc2014.so ${libdir}
+cp "libzbc2014.${dlext}" ${libdir}
 """
 
-# Build for Windows
-script_windows = raw"""
-cd ${WORKSPACE}/srcdir/
-gcc -c complex.c -o complex.o
-gcc -c model_IHC.c -o model_IHC.o
-gcc -c model_Synapse.c -o model_Synapse.o
-gcc -shared -o libzbc2014.lib model_IHC.o model_Synapse.o complex.o
-echo ${libdir}
-mkdir ${libdir}
-cp libzbc2014.lib ${libdir}
-"""
-
-# platforms = [supported_platforms()[1],     # Linux i686 (glibc)
-#              supported_platforms()[2],     # Linux x64 (glibc)
-#              supported_platforms()[6],     # Linux i686 (musl)
-#              supported_platforms()[7]]     # Linux i686 (musl)
-
-#platforms = supported_platforms()[[1, 2, 6, 7]]
-platforms = supported_platforms()[[15, 16]]
+platforms = [
+    Platform("i686", "linux"; libc="glibc"),
+    Platform("x86_64", "linux"; libc="glibc"),
+    Platform("i686", "windows"),
+    Platform("x86_64", "windows"),
+]
 
 products = [
     LibraryProduct("libzbc2014", :libzbc2014)
@@ -44,4 +31,4 @@ products = [
 
 dependencies = []
 
-build_tarballs(ARGS, name, version, sources, script_windows, platforms, products, dependencies)
+build_tarballs(ARGS, name, version, sources, script, platforms, products, dependencies)
