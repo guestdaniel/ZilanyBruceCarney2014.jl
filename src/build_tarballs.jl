@@ -3,8 +3,7 @@ using BinaryBuilder, Pkg
 name = "libzbc2014"
 version = v"0.2.1"
 sources = [
-#    DirectorySource("external")
-     GitSource("https://github.com/guestdaniel/ZilanyBruceCarney2014.jl.git", ""),
+     GitSource("https://github.com/guestdaniel/ZilanyBruceCarney2014.jl.git", "c55d49e656c42471abf6158c187da5a92ecc187f"),
 ]
 
 # Build for Linux
