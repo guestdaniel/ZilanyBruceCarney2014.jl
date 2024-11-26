@@ -9,9 +9,9 @@ sources = [
 # Build for Linux
 script = raw"""
 cd ${WORKSPACE}/srcdir/
-gcc -c -fPIC model_IHC.c
-gcc -c -fPIC model_Synapse.c
-gcc -c -fPIC complex.c 
+gcc -c -fPIC complex.c -o complex.o
+gcc -c -fPIC model_IHC.c -o model_IHC.o
+gcc -c -fPIC model_Synapse.c -o model_Synapse.o
 gcc -shared -o libzbc2014.so model_IHC.o model_Synapse.o complex.o
 echo ${libdir}
 mkdir ${libdir}
@@ -21,9 +21,9 @@ cp libzbc2014.so ${libdir}
 # Build for Windows
 script_windows = raw"""
 cd ${WORKSPACE}/srcdir/
-gcc -c -fPIC model_IHC.c
-gcc -c -fPIC model_Synapse.c
-gcc -c -fPIC complex.c 
+gcc -c complex.c -o complex.o
+gcc -c model_IHC.c -o model_IHC.o
+gcc -c model_Synapse.c -o model_Synapse.o
 gcc -shared -o libzbc2014.lib model_IHC.o model_Synapse.o complex.o
 echo ${libdir}
 mkdir ${libdir}
