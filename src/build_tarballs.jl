@@ -3,12 +3,12 @@ using BinaryBuilder, Pkg
 name = "libzbc2014"
 version = v"0.3.0"
 sources = [
-     GitSource("https://github.com/guestdaniel/ZilanyBruceCarney2014.jl.git", "c55d49e656c42471abf6158c187da5a92ecc187f"),
+     GitSource("https://github.com/guestdaniel/ZBC2014.jl_CSource.jl.git", "861db9fc377ae632ff7af0aab7ace8e815c445b6"),
 ]
 
 # Build for Linux
 script = raw"""
-cd ${WORKSPACE}/srcdir/ZilanyBruceCarney2014.jl/external
+cd ${WORKSPACE}/srcdir/ZBC2014.jl_CSource
 ${CC} -c -fPIC complex.c -o complex.o
 ${CC} -c -fPIC model_IHC.c -o model_IHC.o
 ${CC} -c -fPIC model_Synapse.c -o model_Synapse.o
