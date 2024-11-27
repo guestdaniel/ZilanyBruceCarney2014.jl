@@ -1,4 +1,4 @@
-using BinaryBuilder, Pkg
+using BinaryBuilder
 
 name = "libzbc2014"
 version = v"0.3.0"
@@ -6,7 +6,6 @@ sources = [
      GitSource("https://github.com/guestdaniel/ZBC2014.jl_CSource.git", "861db9fc377ae632ff7af0aab7ace8e815c445b6"),
 ]
 
-# Build for Linux
 script = raw"""
 cd ${WORKSPACE}/srcdir/ZBC2014.jl_CSource
 ${CC} -c -fPIC complex.c -o complex.o
@@ -17,12 +16,6 @@ mkdir ${libdir}
 cp "libzbc2014.${dlext}" ${libdir}
 """
 
-#platforms = [
-#    Platform("i686", "linux"; libc="glibc"),
-#    Platform("x86_64", "linux"; libc="glibc"),
-#    Platform("i686", "windows"),
-#    Platform("x86_64", "windows"),
-#]
 platforms = supported_platforms()
 
 products = [
