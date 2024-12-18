@@ -1,12 +1,11 @@
 name = "ZilanyBruceCarney2014"
 uuid = "83795400-82fe-439b-8fdc-4e65948642a8"
-authors = ["Daniel Guest <guest121@gmail.com>"]
-version = "0.2.1"
+authors = ["Daniel Guest <daniel_guest@urmc.rochester.edu>"]
+version = "1.0.0"
 
 [deps]
 AuditorySignalUtils = "20759599-9703-4078-b9af-37a489742e5c"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-BinaryBuilder = "12aac903-9f7c-5d81-afc2-d9565ea332ae"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 FourierTools = "b18b359b-aebc-45ac-a139-9c0ccbb2871e"
@@ -16,6 +15,7 @@ SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+zbc2014_jll = "9bdc8d4c-a601-5095-9993-2c2aa82463f6"
 
 [compat]
 julia = "1.6"

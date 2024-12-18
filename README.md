@@ -1,39 +1,51 @@
 # ZilanyBruceCarney2014.jl
 
-ZilanyBruceCarney2014.jl is a Julia package that provides access to the Zilany, Bruce, and Carney (2014) auditory auditory-nerve model in Julia. 
+ZilanyBruceCarney2014.jl is a Julia package that provides access to the Zilany, Bruce, and Carney (2014) auditory-nerve model in Julia. 
 
 ```
-Zilany, M. S. A., Bruce, I. C., & Carney, L. H. (2014). Updated parameters and expanded simulation options for a model of the auditory periphery. The Journal of the Acoustical Society of America, 135(1), 283–286.
-http://dx.doi.org/10.1121/1.4837815
+Zilany, M. S. A., Bruce, I. C., & Carney, L. H. (2014). Updated parameters and expanded simulation options for a model of the auditory periphery. The Journal of the Acoustical Society of America, 135(1), 283–286. http://dx.doi.org/10.1121/1.4837815
 ```
 
 ## Why a new package? Why Julia?
-Existing bindings for some models already exist in several Python or MATLAB packages such as [cochlea](https://github.com/mrkrd/cochlea) and [Auditory Modeling Toolbox](https://amtoolbox.org/).
+Existing bindings for some models already exist in several MATLAB or Python packages such as [the original code release](https://www.urmc.rochester.edu/MediaLibraries/URMCMedia/labs/carney-lab/codes/Zilany-2014-Code-and-paper.zip), [cochlea](https://github.com/mrkrd/cochlea) and [Auditory Modeling Toolbox](https://amtoolbox.org/).
 This package was written in Julia to supplement existing packages and leverage several unique benefits of Julia:
-- Interoperability between Julia and C is excellent. Julia has a ["no boilerplate" philosophy](https://docs.julialang.org/en/v1/manual/calling-c-and-fortran-code/) that results in C bindings that are less complicated than those of Python or MATLAB.
+- Interoperability between Julia and C is excellent. Julia has a ["no boilerplate" philosophy](https://docs.julialang.org/en/v1/manual/calling-c-and-fortran-code/) that results in C bindings that easy to write and maintain.
 - Julia can be exceptionally fast, but it is still a high-level langauge. This allows us to extend tools and models written in low-level langauges (such as C) using a high-level language (Julia) while avoiding some of the performance penalty usually associated with writing in a high-level language. 
 - Julia has a rapidly developing ecosystem of state-of-the-art packages that could be easily integrated with this package. Examples relevant to those in the auditory modeling field including [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl), [DynamicalSystems.jl](https://github.com/JuliaDynamics/DynamicalSystems.jl), [Flux.jl](https://github.com/FluxML/Flux.jl), and [Turing.jl](https://github.com/TuringLang/Turing.jl). 
 
 # Installation
-In this early version of ZilanyBruceCarney2014.jl, installation unfortunately relies on some manual steps (this will be improved soon).
-Follow the steps below and reach out if you have any questions:
-1. To install ZilanyBruceCarney2014.jl, clone the repository from GitHub, either from the download link on the GitHub page or with the following CLI git command:
+Installation is very easy.
+Simply open your package REPL by pressing `]` while your Julia REPL is open, and then type:
 ```
-git clone git@github.com/guestdaniel/ZilanyBruceCarney2014.jl
+add ZilanyBruceCarney2014
 ```
-2. Navigate to wherever you cloned the repository and execute the compilation script `external/shared_library.sh`. 
-Note that you will need to have `gcc` installed, or modify the script to suit your installed C compiler.
-3. Use a text editor or your IDE to modify line 5 of `src/ZilanyBruceCarney2014.jl` to point to your copy of `libzcb2014.so`, which should be in the same folder as the compilation script (assuming that the script executed successfully). 
-This is an unfortunate manual step that we are working to eliminate from the install process!
-4. From whatever Julia envronment you want to use the package, activate the package REPL (press `]` in the regular REPL) and install with:
+The Julia package manager should then automatically install the Julia source code and download the appropriate packaged C binaries for your platform.
+Binaries are available for most processor architectures on Linux (using either `glibc` or `musl`), for 32- and 64-bit Windows platforms, and for 64-bit Mac platforms.
+
+In your own scripts or packages, you can put
 ```
-add path/to/package/folder
+using ZilanyBruceCarney2014
+```
+at the top and then use the functions described below to invoke the model.
+
+If you run into any problems, please reach out to daniel_guest@urmc.rochester.edu.
+
+# Usage 
+There are three key functions for users of the model: `sim_ihc_zbc2014`, `sim_anrate_zbc2014`, and `sim_spikes_zbc2014`. 
+You can find documentation for these functions in the source code or in the REPL, accessible by first typing `?` in the Julia REPL to access help and then typing the name of the function.
+(Note that the package must be loaded via `using` before you look for help — see above for details.)
+Each of these functions accepts two positional arguments:
+1. Vector-valued input waveform. For `sim_ihc_zbc2014`, this is the acoustic waveform; for the other functions, this is the output of `sim_ihc_zbc2014`.
+2. Scalar-valued CF in Hz.
+
+Other parameters are passed as keyword arguments. For example, simulating an IHC response at 4 kHz CF using the cat model would be done as follows:
+```
+ihc_output = sim_ihc_zbc2014(stimulus, 4e3; species="cat")
 ```
 
-# Interface
-Currently, two "levels" of functions are provided.
-- The first, for models written in C, is a set of low-level bindings which emulate the function signatures of the original C functions and directly pass their inputs to a `ccall`. For the Zilany, Bruce, and Carney (2014) model, these include `IHCAN!`, `Synapse!`, and `SingleAN!` (the exclamation marks indicate that they operate on their arguments in-place, just as the original functions do). 
-- The second is a set of more convenient wrappers written for end-users. These functions insulate end-users from seeing the "guts" of calling C, handling pointers, etc., and instead look and feel just like any other Julia function. These include `sim_ihc_zbc2014`, `sim_synapse_zbc2014`, and `sim_an_zbc2014`, to simulate inner-hair-cell, synapse, and auditory-nerve responses, respectively, for the Zilany, Bruce, and Carney (2014) model. Users should default to using these functions to simulate responses. 
+Direct bindings are available in the form of the functions `IHCAN!`, `Synapse!`, and `SingleAN!`, which emulate the behaviors of the corresponding C functions in the model source code.
+Note that the exclamation marks indicate that these functions operate on (some of) their arguments in-place, just as the original functions in C do. 
+Most users will not need to interact with these functions.
 
 # Testing
 Many basic response properties of the auditory-nerve simulations (e.g., responses grow in response in increasing sound level) are tested in `test/runtests.jl`. 

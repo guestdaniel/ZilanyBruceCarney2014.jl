@@ -2,7 +2,7 @@ module ZilanyBruceCarney2014
 
 using DSP
 using FFTW
-const libzbc2014 = "C:\\Users\\dguest2\\ZilanyBruceCarney2014.jl\\external\\libzbc2014.so"
+using zbc2014_jll
 
 export sim_ihc_zbc2014, sim_ihc_zbc2014!,
        sim_synapse_zbc2014, sim_synapse_zbc2014!,
