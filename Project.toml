@@ -19,3 +19,11 @@ zbc2014_jll = "9bdc8d4c-a601-5095-9993-2c2aa82463f6"
 
 [compat]
 julia = "1.6"
+AuditorySignalUtils = "0.1"
+BenchmarkTools = "1"
+DSP = "0.7"
+FFTW = "1"
+FourierTools = "0.4"
+ProgressMeter = "1"
+SafeTestsets = "0.1"
+SpecialFunctions = "2"
