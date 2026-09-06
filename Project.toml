@@ -1,7 +1,7 @@
-name = "ZilanyBruceCarney2014"
+name = "caplab_zbc2014"
 uuid = "83795400-82fe-439b-8fdc-4e65948642a8"
-version = "1.0.1"
-authors = ["Daniel Guest <daniel_guest@urmc.rochester.edu>"]
+version = "0.1.0"
+authors = ["Daniel Guest <daniel-guest@uiowa.edu>"]
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"

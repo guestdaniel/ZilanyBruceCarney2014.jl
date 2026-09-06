@@ -1,4 +1,4 @@
-module ZilanyBruceCarney2014
+module caplab_zbc2014
 
 using DSP
 using FFTW
