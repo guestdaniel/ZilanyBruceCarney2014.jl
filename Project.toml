@@ -1,6 +1,6 @@
 name = "caplab_zbc2014"
-uuid = "83795400-82fe-439b-8fdc-4e65948642a8"
-version = "0.1.0"
+uuid = "e6e7f8da-39d5-454e-9769-793fa81b0d40"
+version = "0.1.1"
 authors = ["Daniel Guest <daniel-guest@uiowa.edu>"]
 
 [deps]
