@@ -8,9 +8,36 @@ are tested [visually] elsewhere).
 
 using Test
 using ZilanyBruceCarney2014
-using AuditorySignalUtils
 using Statistics
 using DSP
+
+# Declare some functions we need for testing
+# These are adapted from some old signal processing code that is in the process
+# of being replaced with a new package, but they should work okay for testing
+timevec(dur::Float64, fs) = (0.0:(1/fs):nextfloat(dur-1/fs))
+timevec(samples::Int64, fs) = (0.0:(1/fs):nextfloat(samples/fs-1/fs))
+timevec(x::Vector, fs) = (0.0:(1/fs):nextfloat(length(x)/fs-1/fs))
+hann(n, N) = (1/2) * (1 - cos(2π*n/N))
+amplify(x, dB) = x .* 10.0^(dB/20.0)
+dbspl(x) = 20.0*log10(DSP.rms(x)/20e-6)
+scale_dbspl(x, level) = amplify(x, isnan(level - dbspl(x)) ? -Inf : level - dbspl(x))
+pure_tone(freq, ϕ, dur, fs) = sin.(2π .* freq .* timevec(dur, fs) .+ ϕ)
+pure_tone(; freq=1e3, ϕ=0.0, dur=1.0, fs=100e3) = pure_tone(freq, ϕ, dur, fs)
+
+function cosine_ramp(x, dur_ramp, fs)
+    len = samples(dur_ramp, fs)
+    r = hann.(0:(len-1), len*2)
+    r = vcat(r, ones(length(x) - 2*length(r)), reverse(r))
+    return x .* r
+end
+
+function LogRange(a::T, b::T, n::Int) where {T<:Real}
+    if n == 1
+        exp(1/2 * (log(a) + log(b)))
+    else
+        exp.(LinRange(log(a), log(b), n))
+    end
+end
 
 # Declare various constants that hold across all tests in this file
 fs = 100e3
